@@ -1,0 +1,30 @@
+package korastudy.be.entity.Post;
+
+import jakarta.persistence.*;
+import korastudy.be.entity.BaseEntity.BaseTimeEntity;
+import lombok.*;
+
+import java.util.List;
+
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+@Getter
+@Setter
+@Entity
+@Table(name = "tag")
+public class Tag extends BaseTimeEntity {
+
+    @Id
+    @Column(name = "tag_id")
+    private String tagId;
+
+    @Column(name = "tag_title")
+    private String tagTitle;
+
+    @Column(name = "tag_context")
+    private String tagContext;
+
+    @ManyToMany(mappedBy = "tags")
+    private List<Post> posts;
+}
