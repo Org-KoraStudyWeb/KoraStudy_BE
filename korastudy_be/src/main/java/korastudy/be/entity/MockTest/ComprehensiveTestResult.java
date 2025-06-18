@@ -3,33 +3,37 @@ package korastudy.be.entity.MockTest;
 import jakarta.persistence.*;
 import korastudy.be.entity.BaseEntity.BaseTimeEntity;
 import korastudy.be.entity.User;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
 @AllArgsConstructor
 @NoArgsConstructor
-@Data
+@Getter
+@Setter
 @Builder
 @Entity
-@Table(name = "test_comment")
-public class MockTestComment extends BaseTimeEntity {
+@Table(name = "comprehensive_test_result")
+public class ComprehensiveTestResult extends BaseTimeEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "test_comment_id")
+    @Column(name = "test_result_id")
     private Long id;
 
-    @Column(name = "test_context_context")
-    private String context;
+    @Column(name = "test_result_type")
+    private String testType;
 
-    @Column(name = "test_comment_published")
-    private Boolean published;
+    @Column(name = "test_date")
+    private LocalDateTime testDate;
 
-    @Column(name = "test_comment_published_at")
-    private LocalDateTime publishedAt;
+    @Column(name = "result_correct")
+    private Integer noCorrect;
+
+    @Column(name = "result_incorrect")
+    private Integer noIncorrect;
+
+    @Column(name = "scores")
+    private Double scores;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "test_id", nullable = false)
