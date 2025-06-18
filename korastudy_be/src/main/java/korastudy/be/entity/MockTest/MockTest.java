@@ -43,6 +43,9 @@ public class MockTest extends BaseTimeEntity {
     private List<MockTestComment> comments;
 
     @OneToMany(mappedBy = "mockTest", cascade = CascadeType.ALL)
-    private List<MockTestResult> results;
+    private List<ComprehensiveTestResult> testResults;
+
+    @OneToMany(mappedBy = "mockTest", cascade = CascadeType.ALL)
+    private List<PracticeTestResult> practiceTestResults;
 
 }

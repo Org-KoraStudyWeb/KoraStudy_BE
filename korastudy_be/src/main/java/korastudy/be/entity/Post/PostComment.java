@@ -2,6 +2,7 @@ package korastudy.be.entity.Post;
 
 import jakarta.persistence.*;
 import korastudy.be.entity.BaseEntity.BaseTimeEntity;
+import korastudy.be.entity.User;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -23,10 +24,8 @@ public class PostComment extends BaseTimeEntity {
     @Column(name = "post_comment_context")
     private String context;
 
-    private String comment;
-
-    @Column(name = "post_comment_published")
-    private String published;
+    @Column(name = "is_published")
+    private Boolean isPublished;
 
     @Column(name = "post_comment_published_at")
     private LocalDateTime publishedAt;
@@ -35,5 +34,7 @@ public class PostComment extends BaseTimeEntity {
     @JoinColumn(name = "post_id", nullable = false)
     private Post post;
 
-
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 }

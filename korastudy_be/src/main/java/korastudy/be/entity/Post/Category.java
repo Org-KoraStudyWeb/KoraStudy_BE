@@ -20,7 +20,7 @@ public class Category extends BaseTimeEntity {
     @Column(name = "category_id")
     private String categoryId;
 
-    @Column(name = "category_title")
+    @Column(name = "title")
     private String categoryTitle;
 
     @Column(name = "category_context")
