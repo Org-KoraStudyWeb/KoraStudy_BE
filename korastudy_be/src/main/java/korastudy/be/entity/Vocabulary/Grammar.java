@@ -1,4 +1,4 @@
-package korastudy.be.entity;
+package korastudy.be.entity.Vocabulary;
 
 import jakarta.persistence.*;
 import korastudy.be.entity.BaseEntity.BaseTimeEntity;

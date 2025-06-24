@@ -2,7 +2,7 @@ package korastudy.be.entity.Course;
 
 import jakarta.persistence.*;
 import korastudy.be.entity.BaseEntity.BaseTimeEntity;
-import korastudy.be.entity.User;
+import korastudy.be.entity.User.User;
 import lombok.*;
 
 @Entity

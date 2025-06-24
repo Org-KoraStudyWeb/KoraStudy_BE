@@ -3,7 +3,7 @@ package korastudy.be.entity.Course;
 import jakarta.persistence.*;
 import korastudy.be.entity.BaseEntity.BaseTimeEntity;
 import korastudy.be.entity.Certificate;
-import korastudy.be.entity.Grammar;
+import korastudy.be.entity.Vocabulary.Grammar;
 import korastudy.be.entity.PaymentHistory;
 import korastudy.be.entity.Vocabulary.Topic;
 import lombok.*;

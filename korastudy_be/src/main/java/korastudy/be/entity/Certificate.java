@@ -3,9 +3,9 @@ package korastudy.be.entity;
 import jakarta.persistence.*;
 import korastudy.be.entity.BaseEntity.BaseTimeEntity;
 import korastudy.be.entity.Course.Course;
+import korastudy.be.entity.User.User;
 import lombok.*;
 
-import java.time.DateTimeException;
 import java.time.LocalDate;
 
 @AllArgsConstructor
