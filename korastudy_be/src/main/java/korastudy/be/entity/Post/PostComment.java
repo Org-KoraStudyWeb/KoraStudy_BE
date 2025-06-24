@@ -2,7 +2,7 @@ package korastudy.be.entity.Post;
 
 import jakarta.persistence.*;
 import korastudy.be.entity.BaseEntity.BaseTimeEntity;
-import korastudy.be.entity.User;
+import korastudy.be.entity.User.User;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

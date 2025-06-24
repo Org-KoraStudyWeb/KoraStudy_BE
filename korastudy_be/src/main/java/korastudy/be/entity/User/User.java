@@ -1,15 +1,18 @@
-package korastudy.be.entity;
+package korastudy.be.entity.User;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 import korastudy.be.entity.BaseEntity.BaseTimeEntity;
-import korastudy.be.entity.Card.SetCard;
+import korastudy.be.entity.FlashCard.SetCard;
+import korastudy.be.entity.Certificate;
 import korastudy.be.entity.Course.CourseTestResult;
 import korastudy.be.entity.Course.MyCourse;
 import korastudy.be.entity.Enum.Gender;
-import korastudy.be.entity.Enum.UserRole;
 import korastudy.be.entity.MockTest.MockTestComment;
 import korastudy.be.entity.MockTest.ComprehensiveTestResult;
 import korastudy.be.entity.MockTest.PracticeTestResult;
+import korastudy.be.entity.Notification;
+import korastudy.be.entity.PaymentHistory;
 import korastudy.be.entity.Post.PostComment;
 import lombok.*;
 
@@ -22,18 +25,18 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Table(name = "user")
+@Table(name = "users")
 public class User extends BaseTimeEntity {
 
     @Id
-    @Column(name = "user_id", nullable = false, unique = true)
-    private String id; // String là ổn nếu bạn muốn UUID hoặc định danh tự tạo
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private String id;
 
-    @Column(nullable = false, unique = true, length = 50)
-    private String username;
+    private String userCode;
 
-    @Column(nullable = false)
-    private String password;
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "account_id", nullable = false, unique = true)
+    private Account account;
 
     @Column(name = "first_name")
     private String firstName;
@@ -44,6 +47,7 @@ public class User extends BaseTimeEntity {
     @Column(unique = true)
     private String email;
 
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     @Column(name = "date_of_birth")
     private LocalDate dob;
 
@@ -51,16 +55,15 @@ public class User extends BaseTimeEntity {
     @Column(nullable = false)
     private Gender gender;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private UserRole role;
-
     private String level;
+
+    private String idCard;
+
+    private String customerImg;
 
     private String avatar;
 
-    @Column(name = "is_deleted")
-    private Boolean isDeleted = false;
+    private boolean isEnable;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<MockTestComment> TestComments;

@@ -1,8 +1,8 @@
-package korastudy.be.entity.Card;
+package korastudy.be.entity.FlashCard;
 
 import jakarta.persistence.*;
 import korastudy.be.entity.BaseEntity.BaseTimeEntity;
-import korastudy.be.entity.User;
+import korastudy.be.entity.User.User;
 import lombok.*;
 
 import java.util.List;
