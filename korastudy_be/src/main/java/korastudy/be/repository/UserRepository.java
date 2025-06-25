@@ -24,9 +24,6 @@ public interface UserRepository extends JpaRepository<User, String> {
     @Query("SELECT u FROM User u WHERE u.account.username = :username")
     Optional<User> findByUsername(@Param("username") String username);
 
-    //Tìm user chưa bị xóa(chức năng thêm)
-    List<User> findByIsDeletedFalse();
-
     // Vô hiệu hóa người dùng (soft delete)
     @Modifying
     @Query("UPDATE User u SET u.isEnable = false WHERE u.userCode = :userCode")
