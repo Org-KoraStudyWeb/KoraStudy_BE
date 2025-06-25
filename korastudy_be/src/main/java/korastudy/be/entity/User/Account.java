@@ -29,6 +29,9 @@ public class Account extends BaseTimeEntity {
     @Column(nullable = false, unique = true)
     private String email;
 
+    @Column(name = "phone_number", unique = true)
+    private String phoneNumber;
+
     private boolean isEnabled = true;
 
     @ManyToMany(fetch = FetchType.EAGER)

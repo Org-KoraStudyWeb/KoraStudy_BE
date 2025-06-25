@@ -4,18 +4,18 @@ import korastudy.be.dto.request.LoginRequest;
 import korastudy.be.dto.request.RegisterRequest;
 import korastudy.be.dto.response.JwtResponse;
 import korastudy.be.repository.AccountRepository;
+import korastudy.be.repository.RoleRepository;
+import korastudy.be.security.jwt.JwtUtils;
 import korastudy.be.service.IAccountService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-@RequiredArgsConstructor
 @Service
 public class AccountService implements IAccountService {
-    private final AccountRepository accountRepository;
 
     @Override
     public void register(RegisterRequest request) {
-
     }
 
     @Override
