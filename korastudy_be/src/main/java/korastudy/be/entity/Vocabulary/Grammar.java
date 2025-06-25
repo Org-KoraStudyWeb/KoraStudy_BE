@@ -15,8 +15,8 @@ import lombok.*;
 public class Grammar extends BaseTimeEntity {
 
     @Id
-    @Column(name = "grammar_id")
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
     @Column(name = "grammar_name")
     private String name;

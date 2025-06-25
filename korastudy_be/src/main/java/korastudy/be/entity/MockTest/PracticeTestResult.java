@@ -17,7 +17,6 @@ import java.time.LocalDateTime;
 public class PracticeTestResult extends BaseTimeEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "practice_test_id")
     private Long id;
 
 

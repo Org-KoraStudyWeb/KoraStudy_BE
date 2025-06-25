@@ -19,7 +19,6 @@ public class Certificate extends BaseTimeEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "certificate_id")
     private Long id;
 
     @Column(name = "certificate_name", nullable = false)

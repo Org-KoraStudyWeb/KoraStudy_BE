@@ -16,7 +16,6 @@ import lombok.NoArgsConstructor;
 public class MockTestAnswers extends BaseTimeEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "answer_id")
     private Long id;
 
     private String selectedAnswer;

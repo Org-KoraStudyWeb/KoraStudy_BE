@@ -18,7 +18,6 @@ import java.util.List;
 public class MockTestPart extends BaseTimeEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "part_id")
     private Long id;
 
     private Integer partNumber;

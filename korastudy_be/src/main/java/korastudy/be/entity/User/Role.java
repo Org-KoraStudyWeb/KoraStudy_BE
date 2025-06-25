@@ -1,8 +1,10 @@
 package korastudy.be.entity.User;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 @Entity
@@ -15,14 +17,12 @@ import java.util.Set;
 public class Role {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "role_id")
-    private Long id;
+    private Long roleId;
 
     @Column(nullable = false, unique = true)
-    private String name; // ví dụ: "ROLE_ADMIN", "ROLE_USER"
+    private String roleName; // ví dụ: "ROLE_ADMIN", "ROLE_USER"
 
-    private String description;
-
+    @JsonBackReference
     @ManyToMany(mappedBy = "roles")
-    private Set<Account> accounts;
+    private Set<Account> accounts = new LinkedHashSet<>();
 }

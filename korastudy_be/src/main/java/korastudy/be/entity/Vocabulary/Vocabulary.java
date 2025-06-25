@@ -16,8 +16,8 @@ import java.util.List;
 public class Vocabulary extends BaseTimeEntity {
 
     @Id
-    @Column(name = "vocabulary_id")
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
     @Column(nullable = false)
     private String word;

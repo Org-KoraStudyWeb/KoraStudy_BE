@@ -19,7 +19,6 @@ import java.time.LocalDateTime;
 public class MockTestComment extends BaseTimeEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "test_comment_id")
     private Long id;
 
     @Column(name = "test_context_context")

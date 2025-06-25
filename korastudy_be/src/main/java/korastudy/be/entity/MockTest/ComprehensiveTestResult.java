@@ -17,7 +17,6 @@ import java.time.LocalDateTime;
 public class ComprehensiveTestResult extends BaseTimeEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "test_result_id")
     private Long id;
 
     @Column(name = "test_result_type")

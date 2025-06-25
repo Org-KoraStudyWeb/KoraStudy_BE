@@ -6,19 +6,57 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface AccountRepository extends JpaRepository<Account, Long> {
+
+    /*
+    ThienTDV - tìm kiếm tài khoản và xác minh
+     */
+
+    //Tìm tất cả theo email (dùng cho forgot-password/ xác minh)
+    Optional<Account> findByEmail(String email);
+
+    //Tìm tất cả theo username
+    Optional<Account> findByUsername(String username);
+
+    //Tìm tất cả account có role cụ thể (cho admin)
+    @Query("SELECT a FROM Account a JOIN a.roles r WHERE r.roleName = :roleName")
+    List<Account> findAllByRole(@Param("roleName") String roleName);
+
+    //Check Tồn tại email hay username
+    boolean existsByEmail(String email);
+
+    boolean existsByUsername(String username);
+
     /*
     ThienTDV - login, xác thực và phân quyền
      */
 
-    @Query("SELECT account FROM Account account WHERE account.username = ?1")
-    Account findByUserName(String userName);
+    // Tìm tài khoản đang hoạt động (cho login)
+    @Query("SELECT a FROM Account a WHERE a.username = :username AND a.isEnabled = true ")
+    Optional<Account> findActiveAccountByUsername(@Param("username") String username);
 
-    @Query(value = "INSERT INTO account_roles (account_id, role_id) " + "VALUES (:accountId, :roleId)", nativeQuery = true)
-    @Transactional
+    //Set role cho account
     @Modifying
-    void setRoleForAccount(@Param("accountId") Long accountId, @Param("roleId") Long roleId);
+    @Query(value = "INSERT INTO account_roles (account_id, role_id) VALUES (:accountId, :roleId)", nativeQuery = true)
+    void setRoleForAcount(@Param("accountId") Long accountId, @Param("roleId") Long roleId);
+
+    /*
+    ThienTDV - Đổi mật khẩu or Vô hiệu hóa tài khoản
+     */
+
+    // Đổi mật khẩu (nên gọi từ Service với account.setEncryptedPassword(...) + save)
+    @Modifying
+    @Query("UPDATE Account a SET a.encryptedPassword = :newPassword WHERE a.username = :username AND a.isEnabled = true")
+    void updatePassword(@Param("username") String username, @Param("newPassword") String newPassword);
+
+    //Vô hiệu hóa tài khoản (soft delete)
+    @Modifying
+    @Query("UPDATE Account a SET a.isEnabled = false WHERE a.id = :accountId")
+    void disableAccount(@Param("accountId") Long accountId);
+
 }
