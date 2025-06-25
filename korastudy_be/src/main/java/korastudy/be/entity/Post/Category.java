@@ -17,8 +17,8 @@ import java.util.List;
 public class Category extends BaseTimeEntity {
 
     @Id
-    @Column(name = "category_id")
-    private String categoryId;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long categoryId;
 
     @Column(name = "title")
     private String categoryTitle;

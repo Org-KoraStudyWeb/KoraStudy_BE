@@ -20,8 +20,8 @@ import java.util.List;
 public class Course extends BaseTimeEntity {
 
     @Id
-    @Column(name = "course_id", nullable = false, unique = true)
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
     @Column(name = "course_name", nullable = false)
     private String name;

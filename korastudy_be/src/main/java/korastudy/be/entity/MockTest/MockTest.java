@@ -15,8 +15,8 @@ import java.util.List;
 @Table(name = "mock_test")
 public class MockTest extends BaseTimeEntity {
     @Id
-    @Column(name = "test_id")
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
     @Column(name = "test_title")
     private String title;

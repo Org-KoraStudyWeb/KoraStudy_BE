@@ -16,8 +16,8 @@ import java.util.List;
 public class CourseTest extends BaseTimeEntity {
 
     @Id
-    @Column(name = "course_test_id")
-    private String id; // dùng String nếu muốn quản lý ID theo mã riêng, ví dụ "COURSETEST-A1"
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long courseTestId;
 
     @Column(nullable = false)
     private String title;

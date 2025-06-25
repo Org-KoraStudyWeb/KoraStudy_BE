@@ -15,8 +15,8 @@ import lombok.*;
 public class Card extends BaseTimeEntity {
 
     @Id
-    @Column(name = "card_id")
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
     @Column(nullable = false)
     private String term;

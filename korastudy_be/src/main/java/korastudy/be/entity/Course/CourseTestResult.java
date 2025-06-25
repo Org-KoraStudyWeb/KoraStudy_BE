@@ -15,8 +15,8 @@ import lombok.*;
 public class CourseTestResult extends BaseTimeEntity {
 
     @Id
-    @Column(name = "course_test_result_id")
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long resultId;
 
     private Double scores;
 

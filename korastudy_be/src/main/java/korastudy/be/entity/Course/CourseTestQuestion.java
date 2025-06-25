@@ -14,8 +14,8 @@ import lombok.*;
 public class CourseTestQuestion extends BaseTimeEntity {
 
     @Id
-    @Column(name = "course_test_question_id")
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long questionId;
 
     @Column(name = "question_text", nullable = false)
     private String questionText;

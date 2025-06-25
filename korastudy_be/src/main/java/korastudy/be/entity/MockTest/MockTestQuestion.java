@@ -18,7 +18,6 @@ import java.util.List;
 public class MockTestQuestion {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "question_id")
     private Long id;
 
     @Column(name = "question_option")

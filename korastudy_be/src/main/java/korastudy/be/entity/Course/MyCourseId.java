@@ -12,7 +12,7 @@ import java.io.Serializable;
 @NoArgsConstructor
 @AllArgsConstructor
 public class MyCourseId implements Serializable {
-    private String user;
-    private String course;
+    private Long user;
+    private Long course;
 }
 

@@ -17,8 +17,8 @@ import java.util.List;
 public class Topic extends BaseTimeEntity {
 
     @Id
-    @Column(name = "topic_id")
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
     @Column(name = "topic_name", nullable = false)
     private String topicName;

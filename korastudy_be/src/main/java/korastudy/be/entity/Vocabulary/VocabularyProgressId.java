@@ -14,7 +14,7 @@ import java.io.Serializable;
 @NoArgsConstructor
 @AllArgsConstructor
 public class VocabularyProgressId implements Serializable {
-    private String user;
-    private String vocabulary;
-    private String topic;
+    private Long user;
+    private Long vocabulary;
+    private Long topic;
 }
