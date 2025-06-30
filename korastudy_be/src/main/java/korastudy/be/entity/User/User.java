@@ -33,6 +33,7 @@ public class User extends BaseTimeEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(unique = true, nullable = false)
     private String userCode;
 
     @OneToOne(fetch = FetchType.LAZY)
@@ -48,6 +49,8 @@ public class User extends BaseTimeEntity {
     @Column(unique = true)
     private String email;
 
+    private String phoneNumber;
+
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     @Column(name = "date_of_birth")
     private LocalDate dob;
@@ -59,8 +62,6 @@ public class User extends BaseTimeEntity {
     private String level;
 
     private String idCard;
-
-    private String customerImg;
 
     private String avatar;
 

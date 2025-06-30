@@ -1,4 +1,4 @@
-package korastudy.be.error;
+package korastudy.be.exception;
 
 public class AccountException extends RuntimeException {
     public AccountException(String message) {

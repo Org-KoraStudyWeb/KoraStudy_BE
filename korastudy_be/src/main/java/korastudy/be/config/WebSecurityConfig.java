@@ -21,7 +21,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 @RequiredArgsConstructor
 @EnableMethodSecurity(prePostEnabled = true)
-public class SecurityConfig {
+public class WebSecurityConfig {
 
     private final JwtEntryPoint jwtEntryPoint;
     private final JwtFilter jwtFilter;
@@ -31,9 +31,13 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.csrf(csrf -> csrf.disable()).cors(cors -> {
                 }) // cấu hình CORS nếu cần
-                .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS)).exceptionHandling(ex -> ex.authenticationEntryPoint(jwtEntryPoint)).authorizeHttpRequests(auth -> auth.requestMatchers("/api/auth/**",         // Login, Register
-                                "/api/public/**",       // Trang chủ, trang tĩnh
-                                "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(ex -> ex.authenticationEntryPoint(jwtEntryPoint))
+                .authorizeHttpRequests(auth -> auth.requestMatchers("/api/v1/auth/**",         // Login, Register
+                                "/api/v1/public/**",       // Trang chủ, trang tĩnh
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**")
+                        .permitAll()
 
                         // Các route dành cho user thông thường
                         .requestMatchers("/api/user/**").hasAnyRole("USER", "ADMIN")
