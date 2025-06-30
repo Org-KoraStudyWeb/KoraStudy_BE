@@ -1,12 +1,12 @@
 package korastudy.be.repository;
 
+import korastudy.be.entity.Enum.RoleName;
 import korastudy.be.entity.User.Account;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-
 import java.util.List;
 import java.util.Optional;
 
@@ -22,6 +22,8 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
 
     //Tìm tất cả theo username
     Optional<Account> findByUsername(String username);
+
+    Optional<Account> findAccountByUsername(String username);
 
     //Tìm tất cả account có role cụ thể (cho admin)
     @Query("SELECT a FROM Account a JOIN a.roles r WHERE r.roleName = :roleName")
@@ -39,6 +41,10 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
     // Tìm tài khoản đang hoạt động (cho login)
     @Query("SELECT a FROM Account a WHERE a.username = :username AND a.isEnabled = true ")
     Optional<Account> findActiveAccountByUsername(@Param("username") String username);
+
+    //Lấy tất cả theo role name
+    @Query("SELECT a FROM Account a JOIN a.roles r WHERE r.roleName = :roleName")
+    List<Account> findAllByRoles_RoleName(@Param("roleName") RoleName roleName);
 
     //Set role cho account
     @Modifying

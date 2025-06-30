@@ -1,5 +1,6 @@
 package korastudy.be.service;
 
+import korastudy.be.dto.request.CreateAccountRequest;
 import korastudy.be.dto.request.LoginRequest;
 import korastudy.be.dto.request.RegisterRequest;
 import korastudy.be.dto.response.JwtResponse;
@@ -8,6 +9,9 @@ public interface IAccountService {
 
     //Đăng ký tài khoản
     void register(RegisterRequest request);
+
+    //Admin thêm tài khoản
+    void createInternalAccount(CreateAccountRequest request);
 
     // Đăng nhập, trả token + roles + account info
     JwtResponse login(LoginRequest loginRequest);

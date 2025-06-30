@@ -2,6 +2,7 @@ package korastudy.be.entity.User;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
+import korastudy.be.entity.Enum.RoleName;
 import lombok.*;
 
 import java.util.LinkedHashSet;
@@ -19,8 +20,9 @@ public class Role {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long roleId;
 
-    @Column(nullable = false, unique = true)
-    private String roleName; // ví dụ: "ROLE_ADMIN", "ROLE_USER"
+    @Enumerated(EnumType.STRING)
+    @Column(unique = true, nullable = false)
+    private RoleName roleName;
 
     @JsonBackReference
     @ManyToMany(mappedBy = "roles")

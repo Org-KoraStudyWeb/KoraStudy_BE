@@ -14,7 +14,7 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Account extends BaseTimeEntity {
+public class Account{
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
