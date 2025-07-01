@@ -5,7 +5,6 @@ import korastudy.be.dto.request.LoginRequest;
 import korastudy.be.dto.request.RegisterRequest;
 import korastudy.be.dto.response.JwtResponse;
 import korastudy.be.entity.Enum.RoleName;
-import korastudy.be.entity.Notification;
 import korastudy.be.entity.User.Account;
 import korastudy.be.entity.User.Role;
 import korastudy.be.entity.User.User;
@@ -13,15 +12,21 @@ import korastudy.be.exception.AccountException;
 import korastudy.be.exception.AlreadyExistsException;
 import korastudy.be.repository.AccountRepository;
 import korastudy.be.repository.RoleRepository;
-import korastudy.be.repository.UserRepository;
 import korastudy.be.security.jwt.JwtUtils;
+import korastudy.be.security.userprinciple.AccountDetailsImpl;
 import korastudy.be.service.IAccountService;
 import korastudy.be.validate.UserCodeValidate;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Service
@@ -29,6 +34,8 @@ public class AccountService implements IAccountService {
     private final AccountRepository accountRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtUtils jwtUtils;
+    private final AuthenticationManager authenticationManager;
     private final RoleService roleService;
     private final UserService userService;
     private final NotificationService notificationService;
@@ -61,7 +68,6 @@ public class AccountService implements IAccountService {
         Account account = Account.builder()
                 .username(request.getUsername())
                 .email(request.getEmail())
-                .phoneNumber(request.getPhoneNumber())
                 .encryptedPassword(passwordEncoder.encode(request.getPassword()))
                 .roles(Set.of(defaultRole))
                 .isEnabled(true)
@@ -123,9 +129,26 @@ public class AccountService implements IAccountService {
     }
 
     @Override
-    public JwtResponse login(LoginRequest loginRequest) {
-        return null;
+    public JwtResponse login(LoginRequest request) {
+        // 1. Xác thực thông tin đăng nhập
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
+        );
+
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        // 2. Sinh JWT token
+        String jwt = jwtUtils.generateJwtToken(authentication);
+
+        // 3. Lấy thông tin người dùng
+        AccountDetailsImpl userDetails = (AccountDetailsImpl) authentication.getPrincipal();
+        List<RoleName> roles = userDetails.getAuthorities().stream()
+                .map(auth -> RoleName.valueOf(auth.getAuthority().replace("ROLE_", "")))
+                .collect(Collectors.toList());
+
+        return new JwtResponse(jwt, userDetails.getId(), userDetails.getUsername(), roles);
     }
+
 
     @Override
     public String resolveHomePageByRole(String userName) {

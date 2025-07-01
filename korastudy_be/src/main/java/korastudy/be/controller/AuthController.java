@@ -1,7 +1,9 @@
 package korastudy.be.controller;
 
 import jakarta.validation.Valid;
+import korastudy.be.dto.request.LoginRequest;
 import korastudy.be.dto.request.RegisterRequest;
+import korastudy.be.dto.response.JwtResponse;
 import korastudy.be.payload.response.ApiSuccess;
 import korastudy.be.service.IAccountService;
 import korastudy.be.service.INotificationService;
@@ -20,7 +22,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/auth")
-@PreAuthorize("hasAnyRole('DELIVERY_MANAGER', 'CONTENT_MANAGER', 'USER')")
 @RequiredArgsConstructor
 public class AuthController {
     private final IAccountService accountService;
@@ -42,6 +43,13 @@ public class AuthController {
 
 
     //Admin tự thêm tài khoản cho các role quản lý
+
+
+    // Chức năng login
+    @PostMapping("/login")
+    public ResponseEntity<JwtResponse> login(@Valid @RequestBody LoginRequest request) {
+        return ResponseEntity.ok(accountService.login(request));
+    }
 
 
 }

@@ -12,6 +12,7 @@ import org.springframework.security.authentication.dao.DaoAuthenticationProvider
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -29,37 +30,33 @@ public class WebSecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http.csrf(csrf -> csrf.disable()).cors(cors -> {
-                }) // cấu hình CORS nếu cần
+        http
+                .csrf(AbstractHttpConfigurer::disable)
+                .cors(AbstractHttpConfigurer::disable) // Hoặc enable cấu hình CORS riêng nếu dùng frontend
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(jwtEntryPoint))
-                .authorizeHttpRequests(auth -> auth.requestMatchers("/api/v1/auth/**",         // Login, Register
-                                "/api/v1/public/**",       // Trang chủ, trang tĩnh
-                                "/swagger-ui/**",
-                                "/v3/api-docs/**")
-                        .permitAll()
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/v1/auth/**").permitAll() // CHO PHÉP TRUY CẬP /auth/**
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/error").permitAll()
 
-                        // Các route dành cho user thông thường
+                        // Phân quyền theo vai trò
                         .requestMatchers("/api/user/**").hasAnyRole("USER", "ADMIN")
-
-                        // Các route dành cho admin hệ thống
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
-
-                        // Các route dành cho content manager
                         .requestMatchers("/api/content/**").hasRole("CONTENT_MANAGER")
-
-                        // Các route dành cho delivery manager
                         .requestMatchers("/api/delivery/**").hasRole("DELIVERY_MANAGER")
 
-                        // Mặc định: phải xác thực
-                        .anyRequest().authenticated()).authenticationProvider(authenticationProvider()).addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+                        // Còn lại yêu cầu đăng nhập
+                        .anyRequest().authenticated()
+                )
+                .authenticationProvider(authenticationProvider())
+                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder(12); // rounds = 12
+        return new BCryptPasswordEncoder(12);
     }
 
     @Bean

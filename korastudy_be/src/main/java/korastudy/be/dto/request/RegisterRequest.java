@@ -21,8 +21,4 @@ public class RegisterRequest {
 
     @NotBlank(message = "Xác nhận mật khẩu không được để trống")
     private String confirmPassword;
-
-    @NotBlank(message = "Số điện thoại không được để trống")
-    @Pattern(regexp = "^(0[0-9]{9})$", message = "Số điện thoại không hợp lệ")
-    private String phoneNumber;
 }

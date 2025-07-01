@@ -33,7 +33,7 @@ public class User extends BaseTimeEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true, nullable = false)
+    @Column(unique = true)
     private String userCode;
 
     @OneToOne(fetch = FetchType.LAZY)
@@ -56,7 +56,6 @@ public class User extends BaseTimeEntity {
     private LocalDate dob;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private Gender gender;
 
     private String level;
