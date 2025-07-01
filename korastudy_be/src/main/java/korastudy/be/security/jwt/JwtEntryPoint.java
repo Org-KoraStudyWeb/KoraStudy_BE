@@ -19,7 +19,20 @@ public class JwtEntryPoint implements AuthenticationEntryPoint {
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException {
 
-        log.error("Unauthorized error: {}", authException.getMessage());
+        String path = request.getRequestURI();
+        String method = request.getMethod();
+        String token = request.getHeader("Authorization");
+        String ip = request.getRemoteAddr();
+
+        log.warn("""
+                🔒 Unauthorized access attempt:
+                  - URI: {}
+                  - Method: {}
+                  - Client IP: {}
+                  - Token present: {}
+                  - Reason: {}
+                """, path, method, ip, token != null, authException.getMessage());
+
         response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Error: Unauthorized access");
     }
 }
