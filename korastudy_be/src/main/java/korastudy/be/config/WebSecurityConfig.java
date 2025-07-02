@@ -35,6 +35,8 @@ public class WebSecurityConfig {
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(jwtEntryPoint))
                 .authorizeHttpRequests(auth -> auth.requestMatchers("/api/v1/auth/**",         // Login, Register
                                 "/api/v1/public/**",       // Trang chủ, trang tĩnh
+                                "/api/v1/exams",           // Get all exams
+                                "/api/v1/exams/**",        // Exam endpoints
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**")
                         .permitAll()
