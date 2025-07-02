@@ -29,10 +29,7 @@ public class Account{
     @Column(nullable = false, unique = true)
     private String email;
 
-    @Column(name = "phone_number", unique = true)
-    private String phoneNumber;
-
-    private boolean isEnabled = true;
+    private boolean isEnabled;
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(name = "account_roles", joinColumns = @JoinColumn(name = "account_id"), inverseJoinColumns = @JoinColumn(name = "role_id"))
