@@ -77,6 +77,7 @@ public class AccountService implements IAccountService {
 
         User user = User.builder()
                 .userCode(userCode)
+                .email(account.getEmail())
                 .account(account)
                 .isEnable(true)
                 .build();
