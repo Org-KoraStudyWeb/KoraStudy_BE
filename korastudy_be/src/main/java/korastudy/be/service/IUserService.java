@@ -1,6 +1,6 @@
 package korastudy.be.service;
 
-import korastudy.be.dto.request.UpdateManagerProfileRequest;
+import korastudy.be.dto.request.auth.UpdateManagerProfileRequest;
 import korastudy.be.entity.User.Account;
 import korastudy.be.entity.User.User;
 
