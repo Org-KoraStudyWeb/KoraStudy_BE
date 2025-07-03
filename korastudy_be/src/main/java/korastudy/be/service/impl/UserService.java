@@ -1,11 +1,13 @@
 package korastudy.be.service.impl;
-
 import korastudy.be.dto.request.auth.UpdateManagerProfileRequest;
+import korastudy.be.dto.request.UpdateManagerProfileRequest;
+import korastudy.be.dto.request.UserProfileUpdate;
 import korastudy.be.entity.Enum.RoleName;
 import korastudy.be.entity.Notification;
 import korastudy.be.entity.User.Account;
 import korastudy.be.entity.User.User;
 import korastudy.be.exception.AlreadyExistsException;
+import korastudy.be.exception.ResourceNotFoundException;
 import korastudy.be.repository.AccountRepository;
 import korastudy.be.repository.NotificationRepository;
 import korastudy.be.repository.UserRepository;
@@ -25,8 +27,9 @@ public class UserService implements IUserService {
     private final NotificationRepository notificationRepository;
 
 
-    /*
-    ThienTDV - Các chức năng liên quan đến user
+    /**
+     *
+     *ThienTDV - Các chức năng liên quan đến user
      */
 
     //Chức năng sau khi được admin thêm account thì tự manager cập nhật profile
@@ -89,5 +92,43 @@ public class UserService implements IUserService {
     @Override
     public Optional<User> getUserByAccountUsername(String username) {
         return userRepository.findByAccount_Username(username);
+    }
+
+    /**
+     *
+     *Trung - Update thông tin hồ sơ của người dùng
+     */
+    @Override
+//    public User updateProfile(Long userId, UserProfileUpdate dto) {
+//        Optional<User> optionalUser = userRepository.findById(userId);
+//        if (optionalUser.isEmpty()) {
+//            throw new RuntimeException("User not found with id: " + userId);
+//        }
+//
+//        User user = optionalUser.get();
+//
+//        if (dto.getEmail() != null) user.setEmail(dto.getEmail());
+//        if (dto.getFirstName() != null) user.setFirstName(dto.getFirstName());
+//        if (dto.getLastName() != null) user.setLastName(dto.getLastName());
+//        if (dto.getPhoneNumber() != null) user.setPhoneNumber(dto.getPhoneNumber());
+//        if (dto.getGender() != null) user.setGender(dto.getGender());
+//        if (dto.getAvatar() != null) user.setAvatar(dto.getAvatar());
+//        if (dto.getDateOfBirth() != null) user.setDob(dto.getDateOfBirth());
+//
+//        return userRepository.save(user);
+//    }
+    public User updateProfile(Long userId, UserProfileUpdate dto) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng với ID: " + userId));
+
+        if (dto.getEmail() != null) user.setEmail(dto.getEmail());
+        if (dto.getFirstName() != null) user.setFirstName(dto.getFirstName());
+        if (dto.getLastName() != null) user.setLastName(dto.getLastName());
+        if (dto.getPhoneNumber() != null) user.setPhoneNumber(dto.getPhoneNumber());
+        if (dto.getGender() != null) user.setGender(dto.getGender());
+        if (dto.getAvatar() != null) user.setAvatar(dto.getAvatar());
+        if (dto.getDateOfBirth() != null) user.setDob(dto.getDateOfBirth());
+
+        return userRepository.save(user);
     }
 }

@@ -1,6 +1,8 @@
 package korastudy.be.service;
 
 import korastudy.be.dto.request.auth.UpdateManagerProfileRequest;
+import korastudy.be.dto.request.UpdateManagerProfileRequest;
+import korastudy.be.dto.request.UserProfileUpdate;
 import korastudy.be.entity.User.Account;
 import korastudy.be.entity.User.User;
 
@@ -17,4 +19,9 @@ public interface IUserService {
     User findByUserCode(String userCode);
 
     Optional<User> getUserByAccountUsername(String userName);
+
+    /**
+     * Trung - Update thông tin hồ sơ của người dùng
+     */
+    User updateProfile(Long userId, UserProfileUpdate dto);
 }
