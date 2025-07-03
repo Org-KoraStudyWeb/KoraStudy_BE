@@ -1,12 +1,10 @@
-package korastudy.be.dto.request;
+package korastudy.be.dto.request.auth;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import korastudy.be.entity.Enum.RoleName;
-import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
 @Data
 public class CreateAccountRequest {

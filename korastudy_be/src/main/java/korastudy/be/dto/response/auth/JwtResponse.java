@@ -1,4 +1,4 @@
-package korastudy.be.dto.response;
+package korastudy.be.dto.response.auth;
 
 import korastudy.be.entity.Enum.RoleName;
 import lombok.AllArgsConstructor;

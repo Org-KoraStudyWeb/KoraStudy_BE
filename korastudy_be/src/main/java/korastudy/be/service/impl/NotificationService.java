@@ -16,6 +16,10 @@ public class NotificationService implements INotificationService {
 
     private final NotificationRepository notificationRepository;
 
+    /**
+     * ThienTDV - Gửi thông báo
+     */
+
     @Override
     public void notifyProfileRequired(User user, String roleName) {
         Notification notification = Notification.builder().title("Yêu cầu cập nhật hồ sơ").content("Bạn đã được cấp tài khoản với quyền " + roleName + ". Vui lòng cập nhật hồ sơ.").isPublished(false).user(user).build();

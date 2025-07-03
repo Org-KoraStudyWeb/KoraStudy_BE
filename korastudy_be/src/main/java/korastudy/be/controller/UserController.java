@@ -1,6 +1,7 @@
 package korastudy.be.controller;
 
 import jakarta.validation.Valid;
+import korastudy.be.dto.request.auth.UpdateManagerProfileRequest;
 import korastudy.be.dto.request.UpdateManagerProfileRequest;
 import korastudy.be.dto.request.UserProfileUpdate;
 import korastudy.be.entity.User.User;
