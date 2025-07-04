@@ -1,4 +1,10 @@
 package korastudy.be.repository;
 
-public interface MockTestQuestionRepository {
+import korastudy.be.entity.MockTest.MockTestQuestion;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.List;
+
+public interface MockTestQuestionRepository extends JpaRepository<MockTestQuestion, Long> {
+    List<MockTestQuestion> findByQuestionPart_Id(Long partId);
 }
