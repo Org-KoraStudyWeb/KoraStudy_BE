@@ -1,4 +1,4 @@
-package korastudy.be.dto.request;
+package korastudy.be.dto.request.auth;
 
 import korastudy.be.entity.Enum.Gender;
 import lombok.Data;
