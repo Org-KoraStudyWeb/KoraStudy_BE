@@ -12,10 +12,12 @@ import korastudy.be.repository.AccountRepository;
 import korastudy.be.repository.NotificationRepository;
 import korastudy.be.repository.UserRepository;
 import korastudy.be.service.IUserService;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -99,24 +101,11 @@ public class UserService implements IUserService {
      *Trung - Update thông tin hồ sơ của người dùng
      */
     @Override
-//    public User updateProfile(Long userId, UserProfileUpdate dto) {
-//        Optional<User> optionalUser = userRepository.findById(userId);
-//        if (optionalUser.isEmpty()) {
-//            throw new RuntimeException("User not found with id: " + userId);
-//        }
-//
-//        User user = optionalUser.get();
-//
-//        if (dto.getEmail() != null) user.setEmail(dto.getEmail());
-//        if (dto.getFirstName() != null) user.setFirstName(dto.getFirstName());
-//        if (dto.getLastName() != null) user.setLastName(dto.getLastName());
-//        if (dto.getPhoneNumber() != null) user.setPhoneNumber(dto.getPhoneNumber());
-//        if (dto.getGender() != null) user.setGender(dto.getGender());
-//        if (dto.getAvatar() != null) user.setAvatar(dto.getAvatar());
-//        if (dto.getDateOfBirth() != null) user.setDob(dto.getDateOfBirth());
-//
-//        return userRepository.save(user);
-//    }
+    public User getUserById(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
+    }
+    @Override
     public User updateProfile(Long userId, UserProfileUpdate dto) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng với ID: " + userId));
@@ -131,4 +120,32 @@ public class UserService implements IUserService {
 
         return userRepository.save(user);
     }
+
+    @Data
+    public class UserProfileDTO {
+        private Long id;
+        private String email;
+        private String firstName;
+        private String lastName;
+        private String phoneNumber;
+        private String gender;
+        private String avatar;
+        private LocalDate dateOfBirth;
+    }
+
+    public UserProfileDTO toDTO(User user) {
+        UserProfileDTO dto = new UserProfileDTO();
+        dto.setId(user.getId());
+        dto.setEmail(user.getEmail());
+        dto.setFirstName(user.getFirstName());
+        dto.setLastName(user.getLastName());
+        dto.setPhoneNumber(user.getPhoneNumber());
+        dto.setGender(user.getGender() != null ? user.getGender().toString() : null);
+        dto.setAvatar(user.getAvatar());
+        dto.setDateOfBirth(user.getDob());
+        return dto;
+    }
+
+
+
 }

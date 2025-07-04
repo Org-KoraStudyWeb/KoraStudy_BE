@@ -1,15 +1,16 @@
 package korastudy.be.entity.User;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import korastudy.be.entity.BaseEntity.BaseTimeEntity;
-import korastudy.be.entity.FlashCard.SetCard;
 import korastudy.be.entity.Certificate;
 import korastudy.be.entity.Course.CourseTestResult;
 import korastudy.be.entity.Course.MyCourse;
 import korastudy.be.entity.Enum.Gender;
-import korastudy.be.entity.MockTest.MockTestComment;
+import korastudy.be.entity.FlashCard.SetCard;
 import korastudy.be.entity.MockTest.ComprehensiveTestResult;
+import korastudy.be.entity.MockTest.MockTestComment;
 import korastudy.be.entity.MockTest.PracticeTestResult;
 import korastudy.be.entity.Notification;
 import korastudy.be.entity.PaymentHistory;
@@ -21,12 +22,12 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Entity
+@Table(name = "users")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Table(name = "users")
 public class User extends BaseTimeEntity {
 
     @Id
@@ -38,6 +39,7 @@ public class User extends BaseTimeEntity {
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "account_id", nullable = false, unique = true)
+    @JsonManagedReference // 💡 Khi serialize User, nó sẽ mang Account
     private Account account;
 
     @Column(name = "first_name")
