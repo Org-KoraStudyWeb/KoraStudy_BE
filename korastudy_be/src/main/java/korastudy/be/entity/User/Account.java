@@ -1,7 +1,7 @@
 package korastudy.be.entity.User;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
-import korastudy.be.entity.BaseEntity.BaseTimeEntity;
 import lombok.*;
 
 import java.util.LinkedHashSet;
@@ -14,7 +14,7 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Account{
+public class Account {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -32,9 +32,15 @@ public class Account{
     private boolean isEnabled;
 
     @ManyToMany(fetch = FetchType.EAGER)
-    @JoinTable(name = "account_roles", joinColumns = @JoinColumn(name = "account_id"), inverseJoinColumns = @JoinColumn(name = "role_id"))
+    @JoinTable(
+            name = "account_roles",
+            joinColumns = @JoinColumn(name = "account_id"),
+            inverseJoinColumns = @JoinColumn(name = "role_id")
+    )
     private Set<Role> roles = new LinkedHashSet<>();
 
     @OneToOne(mappedBy = "account", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonBackReference // 💡 Ngắt vòng lặp: Account -> User sẽ không serialize User
     private User user;
+
 }

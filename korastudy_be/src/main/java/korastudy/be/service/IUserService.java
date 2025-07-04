@@ -4,6 +4,7 @@ import korastudy.be.dto.request.UpdateManagerProfileRequest;
 import korastudy.be.dto.request.UserProfileUpdate;
 import korastudy.be.entity.User.Account;
 import korastudy.be.entity.User.User;
+import korastudy.be.service.impl.UserService;
 
 import java.util.Optional;
 
@@ -23,4 +24,9 @@ public interface IUserService {
      * Trung - Update thông tin hồ sơ của người dùng
      */
     User updateProfile(Long userId, UserProfileUpdate dto);
+
+    User getUserById(Long userId);
+
+    UserService.UserProfileDTO toDTO(User user);
+
 }

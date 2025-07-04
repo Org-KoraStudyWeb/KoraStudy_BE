@@ -6,6 +6,7 @@ import korastudy.be.dto.request.UserProfileUpdate;
 import korastudy.be.entity.User.User;
 import korastudy.be.payload.response.ApiSuccess;
 import korastudy.be.service.IUserService;
+import korastudy.be.service.impl.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -33,12 +34,26 @@ public class UserController {
      * @param dto DTO chứa thông tin cập nhật
      * @return ResponseEntity với thông tin người dùng đã cập nhật
      */
+
     @PutMapping("/profile/{id}")
-    public ResponseEntity<User> updateProfile(
+    public ResponseEntity<UserService.UserProfileDTO> updateProfile(
             @PathVariable("id") Long userId,
             @RequestBody UserProfileUpdate dto
     ) {
         User updatedUser = userService.updateProfile(userId, dto);
-        return ResponseEntity.ok(updatedUser);
+        UserService.UserProfileDTO responseDto = userService.toDTO(updatedUser);
+        return ResponseEntity.ok(responseDto);
     }
+
+
+    @GetMapping("/profile/{id}")
+    public ResponseEntity<UserService.UserProfileDTO> getProfile(
+            @PathVariable("id") Long userId
+    ) {
+        User user = userService.getUserById(userId);
+        return ResponseEntity.ok(userService.toDTO(user)); // Sử dụng DTO
+    }
+
+
+
 }
