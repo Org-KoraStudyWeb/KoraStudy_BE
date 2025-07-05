@@ -1,8 +1,10 @@
-package korastudy.be.service.impl;
+package korastudy.be.serv
 
 import jakarta.transaction.Transactional;
 import korastudy.be.dto.request.UpdateManagerProfileRequest;
 import korastudy.be.dto.request.UserProfileUpdate;
+import korastudy.be.dto.request.auth.UpdateManagerProfileRequest;
+import korastudy.be.dto.request.auth.UserProfileUp
 import korastudy.be.entity.Enum.RoleName;
 import korastudy.be.entity.Notification;
 import korastudy.be.entity.User.Account;

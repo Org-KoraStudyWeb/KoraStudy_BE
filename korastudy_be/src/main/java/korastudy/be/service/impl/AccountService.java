@@ -1,9 +1,9 @@
 package korastudy.be.service.impl;
 
-import korastudy.be.dto.request.CreateAccountRequest;
-import korastudy.be.dto.request.LoginRequest;
-import korastudy.be.dto.request.RegisterRequest;
-import korastudy.be.dto.response.JwtResponse;
+import korastudy.be.dto.request.auth.CreateAccountRequest;
+import korastudy.be.dto.request.auth.LoginRequest;
+import korastudy.be.dto.request.auth.RegisterRequest;
+import korastudy.be.dto.response.auth.JwtResponse;
 import korastudy.be.entity.Enum.RoleName;
 import korastudy.be.entity.User.Account;
 import korastudy.be.entity.User.Role;
@@ -17,6 +17,7 @@ import korastudy.be.security.userprinciple.AccountDetailsImpl;
 import korastudy.be.service.IAccountService;
 import korastudy.be.validate.UserCodeValidate;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -41,8 +42,8 @@ public class AccountService implements IAccountService {
     private final NotificationService notificationService;
 
 
-    /*
-    ThienTDV - Các chức năng liên quan đến đăng nhập đăng ký
+    /**
+     * ThienTDV - Các chức năng liên quan đến đăng nhập đăng ký
      */
 
     @Override
@@ -150,29 +151,35 @@ public class AccountService implements IAccountService {
         return new JwtResponse(jwt, userDetails.getId(), userDetails.getUsername(), roles);
     }
 
-
-    @Override
-    public String resolveHomePageByRole(String userName) {
-        return "";
-    }
-
     @Override
     public void enableAccount(Long accountId, boolean enable) {
-
+        Account account = accountRepository.findById(accountId)
+                .orElseThrow(() -> new AlreadyExistsException("Không tìm thấy tài khoản"));
+        account.setEnabled(enable);
+        accountRepository.save(account);
     }
 
-    @Override
-    public void assignRole(Long accountId, String roleName) {
-
-    }
 
     @Override
     public void changePassword(String username, String oldPassword, String newPassword) {
+        Account account = accountRepository.findAccountByUsername(username)
+                .orElseThrow(() -> new AlreadyExistsException("Không tìm thấy tài khoản"));
 
+        if (!passwordEncoder.matches(oldPassword, account.getEncryptedPassword())) {
+            throw new AccountException("Mật khẩu cũ không chính xác");
+        }
+
+        account.setEncryptedPassword(passwordEncoder.encode(newPassword));
+        accountRepository.save(account);
     }
 
     @Override
+    @PreAuthorize("hasRole('ADMIN')")
     public void resetPasswordByAdmin(Long accountId, String newPassword) {
+        Account account = accountRepository.findById(accountId)
+                .orElseThrow(() -> new AlreadyExistsException("Không tìm thấy tài khoản"));
 
+        account.setEncryptedPassword(passwordEncoder.encode(newPassword));
+        accountRepository.save(account);
     }
 }
