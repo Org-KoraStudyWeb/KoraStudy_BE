@@ -58,4 +58,7 @@ public class Course extends BaseTimeEntity {
 
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL)
     private List<Topic> topics;
+
+    @OneToMany(mappedBy = "course", cascade = CascadeType.ALL)
+    private List<CourseSection> courseSections;
 }

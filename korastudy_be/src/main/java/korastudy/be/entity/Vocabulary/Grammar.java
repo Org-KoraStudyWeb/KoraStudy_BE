@@ -5,6 +5,8 @@ import korastudy.be.entity.BaseEntity.BaseTimeEntity;
 import korastudy.be.entity.Course.Course;
 import lombok.*;
 
+import java.util.List;
+
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
@@ -29,5 +31,9 @@ public class Grammar extends BaseTimeEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "course_id", nullable = false)
     private Course course;
+
+    @OneToMany(mappedBy = "grammar", cascade = CascadeType.ALL)
+    private List<GrammarSection> grammarSections;
+
 }
 

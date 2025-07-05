@@ -38,4 +38,8 @@ public class Vocabulary extends BaseTimeEntity {
 
     @OneToMany(mappedBy = "vocabulary", cascade = CascadeType.ALL)
     private List<VocabularyProgress> progress;
+
+    @OneToMany(mappedBy = "vocabulary", cascade = CascadeType.ALL)
+    private List<VocabularySection> section;
+
 }

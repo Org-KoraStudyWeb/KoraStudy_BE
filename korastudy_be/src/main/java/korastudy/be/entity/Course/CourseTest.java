@@ -40,4 +40,8 @@ public class CourseTest extends BaseTimeEntity {
 
     @OneToMany(mappedBy = "courseTest", cascade = CascadeType.ALL)
     private List<CourseTestResult> results;
+
+    @OneToMany(mappedBy = "courseTest", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<SectionTest> sectionTests;
+
 }

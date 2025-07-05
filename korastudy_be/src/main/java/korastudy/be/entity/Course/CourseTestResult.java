@@ -33,4 +33,5 @@ public class CourseTestResult extends BaseTimeEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "course_test_id", nullable = false)
     private CourseTest courseTest;
+
 }
