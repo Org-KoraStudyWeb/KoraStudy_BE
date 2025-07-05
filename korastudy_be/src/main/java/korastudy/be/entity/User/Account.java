@@ -3,7 +3,6 @@ package korastudy.be.entity.User;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.*;
-
 import java.util.LinkedHashSet;
 import java.util.Set;
 

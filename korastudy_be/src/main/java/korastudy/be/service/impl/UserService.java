@@ -1,6 +1,10 @@
-package korastudy.be.service.impl;
+package korastudy.be.serv
+
+import jakarta.transaction.Transactional;
+import korastudy.be.dto.request.UpdateManagerProfileRequest;
+import korastudy.be.dto.request.UserProfileUpdate;
 import korastudy.be.dto.request.auth.UpdateManagerProfileRequest;
-import korastudy.be.dto.request.auth.UserProfileUpdate;
+import korastudy.be.dto.request.auth.UserProfileUp
 import korastudy.be.entity.Enum.RoleName;
 import korastudy.be.entity.Notification;
 import korastudy.be.entity.User.Account;
@@ -105,11 +109,18 @@ public class UserService implements IUserService {
                 .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
     }
     @Override
+    @Transactional
     public User updateProfile(Long userId, UserProfileUpdate dto) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng với ID: " + userId));
 
         if (dto.getEmail() != null) user.setEmail(dto.getEmail());
+        if (dto.getEmail() != null) {
+            user.setEmail(dto.getEmail());
+            if (user.getAccount() != null) {
+                user.getAccount().setEmail(dto.getEmail());
+            }
+        }
         if (dto.getFirstName() != null) user.setFirstName(dto.getFirstName());
         if (dto.getLastName() != null) user.setLastName(dto.getLastName());
         if (dto.getPhoneNumber() != null) user.setPhoneNumber(dto.getPhoneNumber());
@@ -117,6 +128,8 @@ public class UserService implements IUserService {
         if (dto.getAvatar() != null) user.setAvatar(dto.getAvatar());
         if (dto.getDateOfBirth() != null) user.setDob(dto.getDateOfBirth());
 
+        // Lưu account trước để tránh FK lỗi
+        accountRepository.save(user.getAccount());
         return userRepository.save(user);
     }
 
@@ -142,9 +155,9 @@ public class UserService implements IUserService {
         dto.setGender(user.getGender() != null ? user.getGender().toString() : null);
         dto.setAvatar(user.getAvatar());
         dto.setDateOfBirth(user.getDob());
+        dto.setEmail(
+                user.getAccount() != null ? user.getAccount().getEmail() : null
+        );
         return dto;
     }
-
-
-
 }
