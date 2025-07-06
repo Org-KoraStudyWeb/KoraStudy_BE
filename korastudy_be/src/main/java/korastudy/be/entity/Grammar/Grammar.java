@@ -1,9 +1,12 @@
-package korastudy.be.entity.Vocabulary;
+package korastudy.be.entity.Grammar;
 
 import jakarta.persistence.*;
 import korastudy.be.entity.BaseEntity.BaseTimeEntity;
 import korastudy.be.entity.Course.Course;
+import korastudy.be.entity.Topic.Topic;
 import lombok.*;
+
+import java.util.List;
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -26,8 +29,11 @@ public class Grammar extends BaseTimeEntity {
     private String imageUrl;
     private String audioUrl;
 
+    @OneToMany(mappedBy = "grammar", cascade = CascadeType.ALL)
+    private List<CourseGrammar> courseGrammars;
+
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "course_id", nullable = false)
-    private Course course;
+    @JoinColumn(name = "topic_id", nullable = false)
+    private Topic topic;
 }
 

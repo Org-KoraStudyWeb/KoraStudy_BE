@@ -4,8 +4,8 @@ import jakarta.validation.Valid;
 import korastudy.be.dto.request.auth.CreateAccountRequest;
 import korastudy.be.entity.User.Role;
 import korastudy.be.payload.response.ApiSuccess;
-import korastudy.be.service.IAccountService;
-import korastudy.be.service.IRoleService;
+import korastudy.be.service.impl.AccountService;
+import korastudy.be.service.impl.RoleService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,8 +19,8 @@ import java.util.List;
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminAccountController {
-    private final IAccountService accountService;
-    private final IRoleService roleService;
+    private final AccountService accountService;
+    private final RoleService roleService;
 
     /*
     ThienTDV - tạo tài khoản nội bộ cho nhân viên

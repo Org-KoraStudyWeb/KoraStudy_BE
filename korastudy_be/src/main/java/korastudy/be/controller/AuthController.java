@@ -4,10 +4,10 @@ import jakarta.validation.Valid;
 import korastudy.be.dto.request.auth.*;
 import korastudy.be.dto.response.auth.JwtResponse;
 import korastudy.be.payload.response.ApiSuccess;
-import korastudy.be.service.IAccountService;
-import korastudy.be.service.INotificationService;
-import korastudy.be.service.IRoleService;
-import korastudy.be.service.IUserService;
+import korastudy.be.service.impl.AccountService;
+import korastudy.be.service.impl.NotificationService;
+import korastudy.be.service.impl.RoleService;
+import korastudy.be.service.impl.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,10 +19,10 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
 public class AuthController {
-    private final IAccountService accountService;
-    private final IRoleService roleService;
-    private final IUserService userService;
-    private final INotificationService notificationService;
+    private final AccountService accountService;
+    private final RoleService roleService;
+    private final UserService userService;
+    private final NotificationService notificationService;
 
     /**
      * ThienTDV - Đăng ký và đăng nhập
