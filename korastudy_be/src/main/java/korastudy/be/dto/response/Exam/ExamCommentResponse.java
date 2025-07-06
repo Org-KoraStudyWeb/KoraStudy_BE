@@ -9,15 +9,10 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class ExamListItemResponse {
+public class ExamCommentResponse {
     private Long id;
-    private String title;
-    private String description;
-    private String level;
-    private Integer totalQuestions;
-    private Integer totalPart;
-    private Integer durationTimes;
-    private Boolean isActive;
+    private String context;
+    private String username;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

@@ -1,6 +1,7 @@
 package korastudy.be.controller;
 
 import korastudy.be.dto.request.Exam.SubmitExamRequest;
+import korastudy.be.dto.response.Exam.ExamCommentResponse;
 import korastudy.be.dto.response.Exam.ExamDetailResponse;
 import korastudy.be.dto.response.Exam.ExamListItemResponse;
 import korastudy.be.dto.response.Exam.ExamResultResponse;
@@ -46,6 +47,20 @@ public class ExamController {
             @RequestParam Long userId
     ) {
         ExamResultResponse result = examService.submitExam(id, request, userId);
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * Nộp bài practice test (một hoặc nhiều phần)
+     */
+    @PostMapping("/{id}/submit-practice")
+    public ResponseEntity<ExamResultResponse> submitPracticeTest(
+            @PathVariable Long id,
+            @RequestParam List<Long> partIds,
+            @RequestBody SubmitExamRequest request,
+            @RequestParam Long userId
+    ) {
+        ExamResultResponse result = examService.submitPracticeTest(id, partIds, request, userId);
         return ResponseEntity.ok(result);
     }
 
@@ -98,5 +113,27 @@ public class ExamController {
     public ResponseEntity<Map<String, Object>> getExamStatistics(@RequestParam Long userId) {
         Map<String, Object> statistics = examService.getExamStatistics(userId);
         return ResponseEntity.ok(statistics);
+    }
+
+    /**
+     * Lấy comments của bài thi
+     */
+    @GetMapping("/{id}/comments")
+    public ResponseEntity<List<ExamCommentResponse>> getExamComments(@PathVariable Long id) {
+        List<ExamCommentResponse> comments = examService.getExamComments(id);
+        return ResponseEntity.ok(comments);
+    }
+
+    /**
+     * Thêm comment cho bài thi
+     */
+    @PostMapping("/{id}/comments")
+    public ResponseEntity<ExamCommentResponse> addExamComment(
+            @PathVariable Long id,
+            @RequestParam String context,
+            @RequestParam Long userId
+    ) {
+        ExamCommentResponse comment = examService.addExamComment(id, context, userId);
+        return ResponseEntity.ok(comment);
     }
 }

@@ -1,23 +1,22 @@
 package korastudy.be.dto.response.Exam;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NoArgsConstructor;
-
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class ExamListItemResponse {
+public class AdminExamDetailResponse {
     private Long id;
     private String title;
     private String description;
     private String level;
     private Integer totalQuestions;
-    private Integer totalPart;
+    private Integer totalParts;
     private Integer durationTimes;
+    private String instructions;
+    private String requirements;
     private Boolean isActive;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private List<AdminExamPartResponse> parts;
 }

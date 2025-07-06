@@ -100,4 +100,14 @@ public class User extends BaseTimeEntity {
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
     private List<VocabularyProgress> vocabularyProgresses;
+
+    // Thêm getter cho username nếu chưa có
+    public String getUsername() {
+        // Nếu có field username thì return username
+        // Nếu không có thì tạo từ firstName + lastName
+        if (this.firstName != null && this.lastName != null) {
+            return this.firstName + " " + this.lastName;
+        }
+        return this.email; // fallback to email
+    }
 }

@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @Setter
 @Builder
 @Entity
-@Table(name = "comprehensive_test_result")
+@Table(name = "comprehensive_test_results")
 public class ComprehensiveTestResult extends BaseTimeEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -33,6 +33,15 @@ public class ComprehensiveTestResult extends BaseTimeEntity {
 
     @Column(name = "scores")
     private Double scores;
+
+    @Column(name = "total_questions")
+    private Integer totalQuestions;
+
+    @Column(name = "earned_points")
+    private Integer earnedPoints;
+
+    @Column(name = "total_points")
+    private Integer totalPoints;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "test_id", nullable = false)

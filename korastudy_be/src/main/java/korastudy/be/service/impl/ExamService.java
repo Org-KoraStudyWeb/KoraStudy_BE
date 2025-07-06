@@ -22,6 +22,8 @@ public class ExamService {
     private final MockTestAnswersRepository answersRepo;
     private final ComprehensiveTestResultRepository resultRepo;
     private final UserRepository userRepo;
+    private final PracticeTestResultRepository practiceResultRepo;
+    private final ExamCommentRepository commentRepo;
 
     public List<ExamListItemResponse> getAllExams() {
         List<MockTest> tests = mockTestRepo.findAll();
@@ -152,6 +154,77 @@ public class ExamService {
         dto.setNoCorrect(correct);
         dto.setNoIncorrect(incorrect);
         dto.setScores(score);
+        dto.setTestDate(result.getTestDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")));
+        return dto;
+    }
+
+    public ExamResultResponse submitPracticeTest(Long examId, List<Long> partIds, SubmitExamRequest request, Long userId) {
+        MockTest mockTest = mockTestRepo.findById(examId)
+            .orElseThrow(() -> new RuntimeException("Không tìm thấy bài thi"));
+
+        User user = userRepo.findById(userId)
+            .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+
+        // Get questions from selected parts only
+        Map<Long, String> correctAnswers = new HashMap<>();
+        Map<Long, Integer> questionPoints = new HashMap<>();
+        int totalQuestions = 0;
+        int totalPoints = 0;
+
+        for (Long partId : partIds) {
+            List<MockTestQuestion> questions = questionRepo.findByQuestionPart_Id(partId);
+            for (MockTestQuestion q : questions) {
+                correctAnswers.put(q.getId(), q.getCorrectAnswer());
+                questionPoints.put(q.getId(), q.getPoints());
+                totalQuestions++;
+                totalPoints += q.getPoints();
+            }
+        }
+
+        // Grade the practice test
+        int correct = 0;
+        int incorrect = 0;
+        int earnedPoints = 0;
+
+        for (SubmitAnswerRequest ans : request.getAnswers()) {
+            String correctAns = correctAnswers.get(ans.getQuestionId());
+            int points = questionPoints.getOrDefault(ans.getQuestionId(), 1);
+            
+            if (correctAns != null && correctAns.equals(ans.getSelectedAnswer())) {
+                correct++;
+                earnedPoints += points;
+            } else {
+                incorrect++;
+            }
+        }
+
+        double score = (totalPoints > 0) ? (earnedPoints * 100.0 / totalPoints) : 0;
+
+        // Save practice test result
+        PracticeTestResult result = PracticeTestResult.builder()
+            .testType("PRACTICE")
+            .noCorrect(correct)
+            .noIncorrect(incorrect)
+            .totalQuestions(totalQuestions)
+            .scores(score)
+            .earnedPoints(earnedPoints)
+            .totalPoints(totalPoints)
+            .completedParts(partIds)
+            .mockTest(mockTest)
+            .user(user)
+            .build();
+        result = practiceResultRepo.save(result);
+
+        // Return result
+        ExamResultResponse dto = new ExamResultResponse();
+        dto.setExamId(examId);
+        dto.setResultId(result.getId());
+        dto.setTotalQuestions(totalQuestions);
+        dto.setNoCorrect(correct);
+        dto.setNoIncorrect(incorrect);
+        dto.setScores(score);
+        dto.setEarnedPoints(earnedPoints);
+        dto.setTotalPoints(totalPoints);
         dto.setTestDate(result.getTestDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")));
         return dto;
     }
@@ -294,5 +367,50 @@ public class ExamService {
         statistics.put("accuracyRate", Math.round(accuracyRate * 100.0) / 100.0);
 
         return statistics;
+    }
+
+    public List<ExamCommentResponse> getExamComments(Long examId) {
+        List<ExamComment> comments = commentRepo.findByMockTest_IdOrderByCreatedAtDesc(examId);
+        List<ExamCommentResponse> dtos = new ArrayList<>();
+
+        for (ExamComment comment : comments) {
+            ExamCommentResponse dto = new ExamCommentResponse();
+            dto.setId(comment.getId());
+            dto.setContext(comment.getContext());
+            dto.setCreatedAt(comment.getCreatedAt());
+            dto.setUpdatedAt(comment.getUpdatedAt());
+            // Sử dụng firstName + lastName thay vì username
+            String displayName = (comment.getUser().getFirstName() != null ? comment.getUser().getFirstName() : "") +
+                           (comment.getUser().getLastName() != null ? " " + comment.getUser().getLastName() : "");
+            dto.setUsername(displayName.trim().isEmpty() ? comment.getUser().getEmail() : displayName.trim());
+            dtos.add(dto);
+        }
+        return dtos;
+    }
+
+    public ExamCommentResponse addExamComment(Long examId, String context, Long userId) {
+        MockTest mockTest = mockTestRepo.findById(examId)
+            .orElseThrow(() -> new RuntimeException("Không tìm thấy bài thi"));
+
+        User user = userRepo.findById(userId)
+            .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+
+        ExamComment comment = ExamComment.builder()
+            .context(context)
+            .mockTest(mockTest)
+            .user(user)
+            .build();
+        comment = commentRepo.save(comment);
+
+        ExamCommentResponse dto = new ExamCommentResponse();
+        dto.setId(comment.getId());
+        dto.setContext(comment.getContext());
+        dto.setCreatedAt(comment.getCreatedAt());
+        dto.setUpdatedAt(comment.getUpdatedAt());
+        // Sử dụng firstName + lastName thay vì username
+        String displayName = (user.getFirstName() != null ? user.getFirstName() : "") +
+                       (user.getLastName() != null ? " " + user.getLastName() : "");
+        dto.setUsername(displayName.trim().isEmpty() ? user.getEmail() : displayName.trim());
+        return dto;
     }
 }
