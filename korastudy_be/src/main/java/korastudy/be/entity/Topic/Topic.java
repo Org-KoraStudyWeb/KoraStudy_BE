@@ -23,10 +23,10 @@ public class Topic extends BaseTimeEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "topic_name", nullable = false)
+    @Column(name = "topic_name", nullable = false, columnDefinition = "NVARCHAR(255)")
     private String topicName;
 
-    @Column(name = "topic_description", columnDefinition = "TEXT")
+    @Column(name = "topic_description", columnDefinition = "NVARCHAR(255)")
     private String topicDescription;
 
     @Column(name = "image_url")

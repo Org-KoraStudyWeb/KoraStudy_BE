@@ -20,16 +20,16 @@ public class TopicGroup extends BaseTimeEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "group_name", nullable = false)
+    @Column(name = "group_name", nullable = false, columnDefinition = "NVARCHAR(255)")
     private String groupName;
 
-    @Column(name = "description", columnDefinition = "TEXT")
+    @Column(name = "description", columnDefinition = "NVARCHAR(500)")
     private String description;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "course_id", nullable = false)
     private Course course;
 
-    @OneToMany(mappedBy = "topicGroup", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "topicGroup", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Topic> topics;
 }
