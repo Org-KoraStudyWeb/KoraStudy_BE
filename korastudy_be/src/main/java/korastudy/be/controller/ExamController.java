@@ -1,5 +1,6 @@
 package korastudy.be.controller;
 
+import korastudy.be.dto.request.Exam.SubmitAnswerRequest;
 import korastudy.be.dto.request.Exam.SubmitExamRequest;
 import korastudy.be.dto.response.Exam.ExamCommentResponse;
 import korastudy.be.dto.response.Exam.ExamDetailResponse;
@@ -46,8 +47,66 @@ public class ExamController {
             @RequestBody SubmitExamRequest request,
             @RequestParam Long userId
     ) {
-        ExamResultResponse result = examService.submitExam(id, request, userId);
-        return ResponseEntity.ok(result);
+        try {
+            System.out.println("=== CONTROLLER RECEIVED ===");
+            System.out.println("Raw Path Variable 'id': " + id);
+            System.out.println("Raw Query Param 'userId': " + userId);
+            System.out.println("Request Body: " + request);
+            
+            // Log request details
+            System.out.println("Request Method: POST");
+            System.out.println("Request URL: /exams/" + id + "/submit?userId=" + userId);
+            
+            if (request != null && request.getAnswers() != null) {
+                System.out.println("Answers received: " + request.getAnswers().size());
+                for (int i = 0; i < Math.min(3, request.getAnswers().size()); i++) {
+                    SubmitAnswerRequest answer = request.getAnswers().get(i);
+                    System.out.println("Sample answer " + i + ": Q" + answer.getQuestionId() + " = " + answer.getSelectedAnswer());
+                }
+            }
+            
+            // Validate parameters
+            if (id == null || id <= 0) {
+                System.err.println("❌ Invalid exam ID: " + id);
+                return ResponseEntity.badRequest().build();
+            }
+            
+            if (userId == null || userId <= 0) {
+                System.err.println("❌ Invalid user ID: " + userId);
+                return ResponseEntity.badRequest().build();
+            }
+            
+            if (request == null || request.getAnswers() == null || request.getAnswers().isEmpty()) {
+                System.err.println("❌ Invalid request body");
+                return ResponseEntity.badRequest().build();
+            }
+            
+            System.out.println("✅ All parameters validated, calling service...");
+            ExamResultResponse result = examService.submitExam(id, request, userId);
+            
+            System.out.println("✅ Service call completed successfully");
+            return ResponseEntity.ok(result);
+            
+        } catch (RuntimeException e) {
+            System.err.println("❌ Runtime error in controller: " + e.getMessage());
+            e.printStackTrace();
+            
+            if (e.getMessage().contains("không tìm thấy người dùng") || 
+                e.getMessage().contains("User ID")) {
+                return ResponseEntity.status(404)
+                    .body(null); // Or create an error response DTO
+            } else if (e.getMessage().contains("không tìm thấy bài thi")) {
+                return ResponseEntity.status(404)
+                    .body(null);
+            } else {
+                return ResponseEntity.status(500)
+                    .body(null);
+            }
+        } catch (Exception e) {
+            System.err.println("❌ Unexpected error in controller: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).build();
+        }
     }
 
     /**
@@ -65,12 +124,35 @@ public class ExamController {
     }
 
     /**
+     * Lấy kết quả chi tiết một lần thi cụ thể
+     */
+    @GetMapping("/result/{resultId}")
+    public ResponseEntity<ExamResultResponse> getExamResultDetail(@PathVariable Long resultId) {
+        try {
+            System.out.println("Getting exam result detail for resultId: " + resultId);
+            ExamResultResponse result = examService.getExamResultDetail(resultId);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            System.err.println("Error getting exam result detail: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(404).build();
+        }
+    }
+
+    /**
      * Lấy lịch sử làm bài của user
      */
     @GetMapping("/history")
     public ResponseEntity<List<ExamResultResponse>> getExamHistory(@RequestParam Long userId) {
-        List<ExamResultResponse> history = examService.getExamHistory(userId);
-        return ResponseEntity.ok(history);
+        try {
+            System.out.println("Getting exam history for userId: " + userId);
+            List<ExamResultResponse> history = examService.getExamHistory(userId);
+            return ResponseEntity.ok(history);
+        } catch (Exception e) {
+            System.err.println("Error getting exam history: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).build();
+        }
     }
 
     /**
@@ -86,15 +168,6 @@ public class ExamController {
     ) {
         List<ExamListItemResponse> exams = examService.searchExams(title, level, type, page, size);
         return ResponseEntity.ok(exams);
-    }
-
-    /**
-     * Lấy kết quả chi tiết một lần thi cụ thể
-     */
-    @GetMapping("/result/{resultId}")
-    public ResponseEntity<ExamResultResponse> getExamResultDetail(@PathVariable Long resultId) {
-        ExamResultResponse result = examService.getExamResultDetail(resultId);
-        return ResponseEntity.ok(result);
     }
 
     /**

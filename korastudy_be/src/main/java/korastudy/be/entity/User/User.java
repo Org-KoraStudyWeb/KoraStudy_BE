@@ -22,7 +22,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Entity
-@Table(name = "users")
+@Table(name = "users") // Make sure table name is correct
 @Getter
 @Setter
 @NoArgsConstructor
@@ -32,6 +32,7 @@ public class User extends BaseTimeEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id") // Explicitly specify column name
     private Long id;
 
     @Column(unique = true)
@@ -109,5 +110,15 @@ public class User extends BaseTimeEntity {
             return this.firstName + " " + this.lastName;
         }
         return this.email; // fallback to email
+    }
+
+    // Add toString for debugging
+    @Override
+    public String toString() {
+        return "User{" +
+                "id=" + id +
+                ", username='" + getUsername() + '\'' +
+                ", email='" + email + '\'' +
+                '}';
     }
 }

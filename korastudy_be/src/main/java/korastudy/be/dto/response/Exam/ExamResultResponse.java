@@ -19,5 +19,5 @@ public class ExamResultResponse {
     private Integer earnedPoints;
     private Integer totalPoints;
     private String testDate;
-    private List<ExamAnswerDetailResponse> answerDetails;
+    private List<ExamAnswerDetailResponse> answerDetails; // Đảm bảo field này có
 }

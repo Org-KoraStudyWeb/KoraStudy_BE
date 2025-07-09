@@ -95,66 +95,221 @@ public class ExamService {
     }
 
     public ExamResultResponse submitExam(Long examId, SubmitExamRequest request, Long userId) {
+        System.out.println("=== EXAM SUBMISSION DEBUG ===");
+        System.out.println("Exam ID: " + examId + " (type: " + examId.getClass().getSimpleName() + ")");
+        System.out.println("User ID: " + userId + " (type: " + userId.getClass().getSimpleName() + ")");
+        System.out.println("Request: " + request);
+        System.out.println("Request answers: " + (request != null ? request.getAnswers() : "null"));
+        
+        // Validate input parameters
+        if (examId == null) {
+            throw new RuntimeException("Exam ID không được null");
+        }
+        if (userId == null) {
+            throw new RuntimeException("User ID không được null");
+        }
+        if (request == null || request.getAnswers() == null) {
+            throw new RuntimeException("Request hoặc answers không được null");
+        }
+        
         // Tìm MockTest
-        MockTest mockTest = mockTestRepo.findById(examId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy bài thi"));
+        MockTest mockTest = null;
+        try {
+            mockTest = mockTestRepo.findById(examId)
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy bài thi với ID: " + examId));
+            System.out.println("✅ Found exam: " + mockTest.getTitle());
+        } catch (Exception e) {
+            System.err.println("❌ Error finding exam: " + e.getMessage());
+            throw e;
+        }
 
-        // Tìm User
-        User user = userRepo.findById(userId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+        // Tìm User với nhiều phương pháp khác nhau
+        User user = null;
+        try {
+            System.out.println("🔍 Searching for user with ID: " + userId);
+            
+            // Phương pháp 1: Tìm trực tiếp theo user.id
+            Optional<User> userOptional = userRepo.findById(userId);
+            System.out.println("findById result: " + userOptional.isPresent());
+            
+            if (userOptional.isPresent()) {
+                user = userOptional.get();
+                System.out.println("✅ Found user by findById: " + user.getEmail() + " (ID: " + user.getId() + ")");
+            } else {
+                System.out.println("❌ User not found by user.id, trying account_id...");
+                
+                // Phương pháp 2: Tìm theo account_id nếu userId thực chất là account_id
+                try {
+                    // Assuming you have a method to find user by account_id
+                    // You might need to create this method in UserRepository
+                    List<User> allUsers = userRepo.findAll();
+                    for (User u : allUsers) {
+                        System.out.println("Checking user: ID=" + u.getId() + ", Email=" + u.getEmail() + 
+                                         ", AccountId=" + (u.getAccount() != null ? u.getAccount().getId() : "null"));
+                        
+                        // Try to match by account_id if user has account relation
+                        if (u.getAccount() != null && u.getAccount().getId().equals(userId)) {
+                            user = u;
+                            System.out.println("✅ Found user by account_id: " + user.getEmail() + " (User ID: " + user.getId() + ", Account ID: " + userId + ")");
+                            break;
+                        }
+                        
+                        // Also try direct ID match
+                        if (u.getId().equals(userId)) {
+                            user = u;
+                            System.out.println("✅ Found user by manual ID search: " + user.getEmail());
+                            break;
+                        }
+                    }
+                } catch (Exception e) {
+                    System.err.println("Error in alternative user search: " + e.getMessage());
+                }
+            }
+            
+            if (user == null) {
+                // Log tất cả user IDs để debug
+                List<User> allUsers = userRepo.findAll();
+                StringBuilder userInfo = new StringBuilder("Available users: ");
+                for (User u : allUsers) {
+                    String accountId = (u.getAccount() != null) ? u.getAccount().getId().toString() : "null";
+                    userInfo.append("User[id=").append(u.getId())
+                           .append(", email=").append(u.getEmail())
+                           .append(", accountId=").append(accountId)
+                           .append("] ");
+                }
+                System.err.println(userInfo.toString());
+                
+                throw new RuntimeException("Không tìm thấy người dùng với ID: " + userId + ". " +
+                    "Đã thử tìm theo user.id và account.id nhưng không thấy.");
+            }
+            
+        } catch (Exception e) {
+            System.err.println("❌ Exception while finding user: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Lỗi khi tìm người dùng: " + e.getMessage());
+        }
+
+        // Verify user object
+        System.out.println("✅ Final user object: " + user.getEmail() + " (User ID: " + user.getId() + 
+                          ", Account ID: " + (user.getAccount() != null ? user.getAccount().getId() : "null") + ")");
 
         // Lấy danh sách câu hỏi và đáp án đúng
         List<MockTestPart> parts = partRepo.findByMockTestId(examId);
         Map<Long, String> correctAnswers = new HashMap<>();
+        Map<Long, String> questionTexts = new HashMap<>();
         int totalQuestions = 0;
+
+        System.out.println("📝 Processing " + parts.size() + " parts");
 
         for (MockTestPart part : parts) {
             List<MockTestQuestion> questions = questionRepo.findByQuestionPart_Id(part.getId());
+            System.out.println("Part " + part.getPartNumber() + " has " + questions.size() + " questions");
+            
             for (MockTestQuestion q : questions) {
-                // Tìm đáp án đúng theo quan hệ ManyToOne
-                List<MockTestAnswers> ansList = answersRepo.findByQuestionAnswer_Id(part.getId());
-                for (MockTestAnswers ans : ansList) {
-                    if (ans.getIsCorrect()) { // Boolean isCorrect
-                        correctAnswers.put(q.getId(), ans.getSelectedAnswer());
-                    }
-                }
+                correctAnswers.put(q.getId(), q.getCorrectAnswer());
+                questionTexts.put(q.getId(), q.getQuestionText());
                 totalQuestions++;
+                System.out.println("Question " + q.getId() + " correct answer: " + q.getCorrectAnswer());
             }
         }
 
-        // Chấm điểm
+        System.out.println("📊 Total questions: " + totalQuestions);
+        System.out.println("📊 Student answers count: " + request.getAnswers().size());
+
+        // Chấm điểm và tạo chi tiết đáp án
         int correct = 0;
         int incorrect = 0;
+        List<ExamAnswerDetailResponse> answerDetails = new ArrayList<>();
+        
         for (SubmitAnswerRequest ans : request.getAnswers()) {
+            System.out.println("Checking question " + ans.getQuestionId() + 
+                             ", student answer: '" + ans.getSelectedAnswer() + "'");
+            
             String correctAns = correctAnswers.get(ans.getQuestionId());
-            if (correctAns != null && correctAns.equals(ans.getSelectedAnswer())) {
+            String questionText = questionTexts.get(ans.getQuestionId());
+            boolean isCorrect = correctAns != null && correctAns.trim().equals(ans.getSelectedAnswer().trim());
+            
+            if (isCorrect) {
                 correct++;
+                System.out.println("✅ Correct");
             } else {
                 incorrect++;
+                System.out.println("❌ Incorrect (correct: '" + correctAns + "')");
+            }
+            
+            // Tạo chi tiết đáp án
+            ExamAnswerDetailResponse detail = new ExamAnswerDetailResponse();
+            detail.setQuestionId(ans.getQuestionId());
+            detail.setQuestionText(questionText != null ? questionText : "");
+            detail.setSelectedAnswer(ans.getSelectedAnswer());
+            detail.setCorrectAnswer(correctAns != null ? correctAns : "");
+            detail.setIsCorrect(isCorrect);
+            detail.setPoints(isCorrect ? 1 : 0);
+            
+            answerDetails.add(detail);
+        }
+        
+        // Thêm các câu chưa làm
+        for (Map.Entry<Long, String> entry : correctAnswers.entrySet()) {
+            Long questionId = entry.getKey();
+            boolean answered = request.getAnswers().stream()
+                .anyMatch(ans -> ans.getQuestionId().equals(questionId));
+            
+            if (!answered) {
+                ExamAnswerDetailResponse detail = new ExamAnswerDetailResponse();
+                detail.setQuestionId(questionId);
+                detail.setQuestionText(questionTexts.get(questionId));
+                detail.setSelectedAnswer("");
+                detail.setCorrectAnswer(entry.getValue());
+                detail.setIsCorrect(false);
+                detail.setPoints(0);
+                answerDetails.add(detail);
             }
         }
-        double score = (totalQuestions > 0) ? (correct * 1.0 / totalQuestions) * 100 : 0;
+        
+        // Sắp xếp theo questionId
+        answerDetails.sort((a, b) -> Long.compare(a.getQuestionId(), b.getQuestionId()));
+        
+        // Tính điểm theo phần trăm
+        double score = (totalQuestions > 0) ? (correct * 100.0 / totalQuestions) : 0;
+        
+        System.out.println("📊 Final score: " + correct + "/" + totalQuestions + " = " + score + "%");
 
-        // Lưu kết quả với quan hệ ManyToOne
-        ComprehensiveTestResult result = ComprehensiveTestResult.builder()
-                .testType("MOCK")
-                .testDate(LocalDateTime.now())
-                .noCorrect(correct)
-                .noIncorrect(incorrect)
-                .scores(score)
-                .mockTest(mockTest) // Quan hệ ManyToOne
-                .user(user) // Quan hệ ManyToOne
-                .build();
-        resultRepo.save(result);
+        // Lưu kết quả
+        ComprehensiveTestResult result = null;
+        try {
+            result = ComprehensiveTestResult.builder()
+                    .testType("COMPREHENSIVE")
+                    .testDate(LocalDateTime.now())
+                    .noCorrect(correct)
+                    .noIncorrect(incorrect)
+                    .scores(score)
+                    .mockTest(mockTest)
+                    .user(user)
+                    .build();
+            
+            System.out.println("💾 Saving result...");
+            result = resultRepo.save(result);
+            System.out.println("✅ Result saved with ID: " + result.getId());
+            
+        } catch (Exception e) {
+            System.err.println("❌ Error saving result: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Lỗi khi lưu kết quả: " + e.getMessage());
+        }
 
-        // Trả về kết quả
+        // Trả về kết quả với chi tiết đáp án
         ExamResultResponse dto = new ExamResultResponse();
         dto.setExamId(examId);
+        dto.setResultId(result.getId());
         dto.setTotalQuestions(totalQuestions);
         dto.setNoCorrect(correct);
         dto.setNoIncorrect(incorrect);
         dto.setScores(score);
         dto.setTestDate(result.getTestDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")));
+        dto.setAnswerDetails(answerDetails); // Thêm chi tiết đáp án
+        
+        System.out.println("🎉 Returning result with " + answerDetails.size() + " answer details");
         return dto;
     }
 
