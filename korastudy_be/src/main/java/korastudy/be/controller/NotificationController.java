@@ -3,8 +3,8 @@ package korastudy.be.controller;
 import korastudy.be.entity.Notification;
 import korastudy.be.entity.User.User;
 import korastudy.be.exception.AlreadyExistsException;
-import korastudy.be.service.INotificationService;
-import korastudy.be.service.IUserService;
+import korastudy.be.service.impl.NotificationService;
+import korastudy.be.service.impl.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,8 +18,8 @@ import java.util.List;
 @RequestMapping("/api/v1/notifications")
 @RequiredArgsConstructor
 public class NotificationController {
-    private final INotificationService notificationService;
-    private final IUserService userService;
+    private final NotificationService notificationService;
+    private final UserService userService;
 
     @GetMapping("/me")
     public ResponseEntity<List<Notification>> getMyNotifications(Principal principal) {
