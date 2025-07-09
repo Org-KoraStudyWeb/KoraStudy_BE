@@ -21,7 +21,7 @@ public class Grammar extends BaseTimeEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "grammar_name")
+    @Column(name = "grammar_name", columnDefinition = "NVARCHAR(255)")
     private String name;
 
     private String meaning;

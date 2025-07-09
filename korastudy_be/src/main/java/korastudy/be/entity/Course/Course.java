@@ -25,13 +25,13 @@ public class Course extends BaseTimeEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "course_name", nullable = false)
+    @Column(name = "course_name", nullable = false, columnDefinition = "NVARCHAR(255)")
     private String name;
 
     @Column(name = "course_level")
     private String level;
 
-    @Column(name = "course_description", columnDefinition = "TEXT")
+    @Column(name = "course_description", columnDefinition = "NVARCHAR(500)")
     private String description;
 
     @Column(name = "course_image_url")

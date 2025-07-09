@@ -36,20 +36,20 @@ public class CourseController {
     }
 
     // 3. Lấy tất cả khóa học (full - không phân trang, chỉ admin dùng)
-    @GetMapping
+    @GetMapping("/lists")
     public ResponseEntity<List<CourseResponse>> getAllCourses() {
         return ResponseEntity.ok(courseService.getAllCourses());
     }
 
     // 4. Tạo khóa học mới
-    @PostMapping
+    @PostMapping("/create")
     public ResponseEntity<ApiSuccess> createCourse(@RequestBody CreateCourseRequest dto) {
         courseService.createCourse(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiSuccess.of("Khóa học đã được tạo thành công"));
     }
 
     // 5. Cập nhật khóa học
-    @PutMapping("/{id}")
+    @PutMapping("/update/{id}")
     public ResponseEntity<ApiSuccess> updateCourse(@PathVariable Long id, @RequestBody CreateCourseRequest dto) {
         courseService.updateCourse(id, dto);
         return ResponseEntity.ok(ApiSuccess.of("Khóa học đã được cập nhật"));
@@ -68,7 +68,7 @@ public class CourseController {
     }
 
     // 8. Xóa khóa học
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/delete/{id}")
     public ResponseEntity<ApiSuccess> deleteCourse(@PathVariable Long id) {
         courseService.deleteCourse(id);
         return ResponseEntity.ok(ApiSuccess.of("Khóa học đã được xóa"));

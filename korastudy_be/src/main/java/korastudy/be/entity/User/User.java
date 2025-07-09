@@ -43,10 +43,10 @@ public class User extends BaseTimeEntity {
     @JsonManagedReference // 💡 Khi serialize User, nó sẽ mang Account
     private Account account;
 
-    @Column(name = "first_name")
+    @Column(name = "first_name", columnDefinition = "NVARCHAR(255)")
     private String firstName;
 
-    @Column(name = "last_name")
+    @Column(name = "last_name", columnDefinition = "NVARCHAR(255)")
     private String lastName;
 
     @Column(unique = true)
