@@ -31,7 +31,7 @@ public class Certificate extends BaseTimeEntity {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @OneToOne
     @JoinColumn(name = "course_id", nullable = false)
     private Course course;
 

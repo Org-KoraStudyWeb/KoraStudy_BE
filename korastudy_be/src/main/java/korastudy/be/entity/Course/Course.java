@@ -3,9 +3,11 @@ package korastudy.be.entity.Course;
 import jakarta.persistence.*;
 import korastudy.be.entity.BaseEntity.BaseTimeEntity;
 import korastudy.be.entity.Certificate;
-import korastudy.be.entity.Vocabulary.Grammar;
+import korastudy.be.entity.Grammar.CourseGrammar;
+import korastudy.be.entity.Grammar.Grammar;
 import korastudy.be.entity.PaymentHistory;
-import korastudy.be.entity.Vocabulary.Topic;
+import korastudy.be.entity.Topic.Topic;
+import korastudy.be.entity.Topic.TopicGroup;
 import lombok.*;
 
 import java.util.List;
@@ -47,15 +49,13 @@ public class Course extends BaseTimeEntity {
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL)
     private List<MyCourse> myCourses;
 
-    @OneToMany(mappedBy = "course", cascade = CascadeType.ALL)
-    private List<Grammar> grammars;
-
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CourseTest> courseTests;
 
-    @OneToMany(mappedBy = "course", cascade = CascadeType.ALL)
-    private List<Certificate> certificates;
+    @OneToOne(mappedBy = "course", cascade = CascadeType.ALL)
+    private Certificate certificate;
 
-    @OneToMany(mappedBy = "course", cascade = CascadeType.ALL)
-    private List<Topic> topics;
+    @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<TopicGroup> topicGroups;
+
 }
