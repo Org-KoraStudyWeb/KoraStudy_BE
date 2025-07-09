@@ -1,9 +1,9 @@
 package korastudy.be.service;
 
-import korastudy.be.dto.request.CreateAccountRequest;
-import korastudy.be.dto.request.LoginRequest;
-import korastudy.be.dto.request.RegisterRequest;
-import korastudy.be.dto.response.JwtResponse;
+import korastudy.be.dto.request.auth.CreateAccountRequest;
+import korastudy.be.dto.request.auth.LoginRequest;
+import korastudy.be.dto.request.auth.RegisterRequest;
+import korastudy.be.dto.response.auth.JwtResponse;
 
 public interface IAccountService {
 
@@ -16,14 +16,8 @@ public interface IAccountService {
     // Đăng nhập, trả token + roles + account info
     JwtResponse login(LoginRequest loginRequest);
 
-    //Kiểm tra role để Redirect phù hợp
-    String resolveHomePageByRole(String userName);
-
     //Kích hoạt hoặc khóa tài khoản
     void enableAccount(Long accountId, boolean enable);
-
-    //Gán role cho account
-    void assignRole(Long accountId, String roleName);
 
     // Dùng khi người dùng tự đổi mật khẩu (yêu cầu xác thực mật khẩu cũ)
     void changePassword(String username, String oldPassword, String newPassword);
