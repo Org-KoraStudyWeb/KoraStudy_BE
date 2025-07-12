@@ -1,4 +1,6 @@
 package korastudy.be.service.impl;
+
+import jakarta.transaction.Transactional;
 import korastudy.be.dto.request.auth.UpdateManagerProfileRequest;
 import korastudy.be.dto.request.auth.UserProfileUpdate;
 import korastudy.be.entity.Enum.RoleName;
@@ -29,8 +31,7 @@ public class UserService implements IUserService {
 
 
     /**
-     *
-     *ThienTDV - Các chức năng liên quan đến user
+     * ThienTDV - Các chức năng liên quan đến user
      */
 
     //Chức năng sau khi được admin thêm account thì tự manager cập nhật profile
@@ -96,20 +97,25 @@ public class UserService implements IUserService {
     }
 
     /**
-     *
-     *Trung - Update thông tin hồ sơ của người dùng
+     * Trung - Update thông tin hồ sơ của người dùng
      */
     @Override
     public User getUserById(Long userId) {
-        return userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
+        return userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
     }
+
     @Override
+    @Transactional
     public User updateProfile(Long userId, UserProfileUpdate dto) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng với ID: " + userId));
+        User user = userRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng với ID: " + userId));
 
         if (dto.getEmail() != null) user.setEmail(dto.getEmail());
+        if (dto.getEmail() != null) {
+            user.setEmail(dto.getEmail());
+            if (user.getAccount() != null) {
+                user.getAccount().setEmail(dto.getEmail());
+            }
+        }
         if (dto.getFirstName() != null) user.setFirstName(dto.getFirstName());
         if (dto.getLastName() != null) user.setLastName(dto.getLastName());
         if (dto.getPhoneNumber() != null) user.setPhoneNumber(dto.getPhoneNumber());
@@ -117,6 +123,8 @@ public class UserService implements IUserService {
         if (dto.getAvatar() != null) user.setAvatar(dto.getAvatar());
         if (dto.getDateOfBirth() != null) user.setDob(dto.getDateOfBirth());
 
+        // Lưu account trước để tránh FK lỗi
+        accountRepository.save(user.getAccount());
         return userRepository.save(user);
     }
 
@@ -142,9 +150,7 @@ public class UserService implements IUserService {
         dto.setGender(user.getGender() != null ? user.getGender().toString() : null);
         dto.setAvatar(user.getAvatar());
         dto.setDateOfBirth(user.getDob());
+        dto.setEmail(user.getAccount() != null ? user.getAccount().getEmail() : null);
         return dto;
     }
-
-
-
 }

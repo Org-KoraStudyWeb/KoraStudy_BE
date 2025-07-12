@@ -16,6 +16,7 @@ import korastudy.be.entity.Notification;
 import korastudy.be.entity.PaymentHistory;
 import korastudy.be.entity.Post.PostComment;
 import korastudy.be.entity.Vocabulary.VocabularyProgress;
+import korastudy.be.entity.Topic.TopicTestResult;
 import lombok.*;
 
 import java.time.LocalDate;
@@ -43,10 +44,10 @@ public class User extends BaseTimeEntity {
     @JsonManagedReference // 💡 Khi serialize User, nó sẽ mang Account
     private Account account;
 
-    @Column(name = "first_name")
+    @Column(name = "first_name", columnDefinition = "NVARCHAR(255)")
     private String firstName;
 
-    @Column(name = "last_name")
+    @Column(name = "last_name", columnDefinition = "NVARCHAR(255)")
     private String lastName;
 
     @Column(unique = true)
@@ -92,6 +93,9 @@ public class User extends BaseTimeEntity {
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CourseTestResult> courseTestResults;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<TopicTestResult> topicTestResults;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Certificate> certificates;

@@ -20,8 +20,8 @@ public class PostMeta {
     @JoinColumn(name = "post_id", nullable = false)
     private Post post;
 
-    private String meta_key;
+    @Column(name = "meta_key")
+    private String metaKey;
 
     private String postMetaContext;
-
 }

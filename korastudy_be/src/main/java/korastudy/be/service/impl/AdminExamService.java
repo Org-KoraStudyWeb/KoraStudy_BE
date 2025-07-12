@@ -407,4 +407,25 @@ public class AdminExamService {
         
         return getExamForEdit(newTest.getId());
     }
+
+    public AdminExamQuestionResponse getQuestionById(Long questionId) {
+        MockTestQuestion question = questionRepo.findById(questionId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy câu hỏi"));
+
+        AdminExamQuestionResponse dto = new AdminExamQuestionResponse();
+        dto.setId(question.getId());
+        dto.setQuestionText(question.getQuestionText());
+        dto.setQuestionType(question.getQuestionType());
+        dto.setOption(question.getOption());
+        dto.setCorrectAnswer(question.getCorrectAnswer());
+        dto.setExplanation(question.getExplanation());
+        dto.setImageUrl(question.getImageUrl());
+        dto.setAudioUrl(question.getAudioUrl());
+        dto.setQuestionOrder(question.getQuestionOrder());
+        dto.setPoints(question.getPoints());
+
+        return dto;
+    }
+
+
 }

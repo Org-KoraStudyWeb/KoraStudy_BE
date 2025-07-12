@@ -181,4 +181,12 @@ public class AdminExamController {
         AdminExamDetailResponse exam = adminExamService.duplicateExam(id);
         return ResponseEntity.status(HttpStatus.CREATED).body(exam);
     }
+
+    @GetMapping("/questions/{questionId}")
+    public ResponseEntity<AdminExamQuestionResponse> getQuestionById(@PathVariable Long questionId) {
+        AdminExamQuestionResponse question = adminExamService.getQuestionById(questionId);
+        return ResponseEntity.ok(question);
+    }
+
+
 }
