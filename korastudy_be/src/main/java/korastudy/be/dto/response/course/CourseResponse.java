@@ -1,9 +1,12 @@
 package korastudy.be.dto.response.course;
 
+import korastudy.be.dto.response.topic.TopicGroupResponseDTO;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
+import java.util.List;
 
 @Getter
 @Setter
@@ -17,10 +20,5 @@ public class CourseResponse {
     private String courseLevel;
     private String courseImageUrl;
     private boolean published;
-
-    private Long topicId;
-    private String topicName;
-
-    private Long certificateId;
-    private String certificateName;
+    private List<TopicGroupResponseDTO> topicGroups;
 }

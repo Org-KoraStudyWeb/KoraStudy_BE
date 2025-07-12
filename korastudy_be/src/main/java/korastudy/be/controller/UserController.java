@@ -5,7 +5,6 @@ import korastudy.be.dto.request.auth.UpdateManagerProfileRequest;
 import korastudy.be.dto.request.auth.UserProfileUpdate;
 import korastudy.be.entity.User.User;
 import korastudy.be.payload.response.ApiSuccess;
-import korastudy.be.service.IUserService;
 import korastudy.be.service.impl.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -19,7 +18,7 @@ import java.security.Principal;
 @RequiredArgsConstructor
 @PreAuthorize("hasAnyRole('DELIVERY_MANAGER', 'CONTENT_MANAGER', 'USER')")
 public class UserController {
-    private final IUserService userService;
+    private final UserService userService;
 
     @PutMapping("/update")
     public ResponseEntity<ApiSuccess> updateProfile(@Valid @RequestBody UpdateManagerProfileRequest request, Principal principal) {

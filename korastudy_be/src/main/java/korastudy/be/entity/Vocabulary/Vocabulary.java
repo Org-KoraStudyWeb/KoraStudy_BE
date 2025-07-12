@@ -2,6 +2,7 @@ package korastudy.be.entity.Vocabulary;
 
 import jakarta.persistence.*;
 import korastudy.be.entity.BaseEntity.BaseTimeEntity;
+import korastudy.be.entity.Topic.Topic;
 import lombok.*;
 
 import java.util.List;
