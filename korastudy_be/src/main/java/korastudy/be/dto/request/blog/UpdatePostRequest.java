@@ -4,9 +4,9 @@ import lombok.Data;
 
 import java.util.List;
 
-// Tạo bài viết
+// Cập nhật bài viết
 @Data
-public class CreatePostRequest {
+public class UpdatePostRequest {
     private String postTitle;
     private String postSummary;
     private String postContent;
