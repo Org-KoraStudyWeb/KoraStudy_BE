@@ -14,20 +14,38 @@ import java.util.List;
 @Data
 @Builder
 @Entity
-@Table(name = "mock_question")
+@Table(name = "mock_test_questions")
 public class MockTestQuestion {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "question_option")
+    @Column(name = "question_text", nullable = false, columnDefinition = "NVARCHAR(2000)")
+    private String questionText;
+
+    @Column(name = "question_type", columnDefinition = "NVARCHAR(50)")
+    private String questionType;
+
+    @Column(name = "options", columnDefinition = "NVARCHAR(2000)")
     private String option;
 
+    @Column(name = "correct_answer", columnDefinition = "NVARCHAR(500)")
+    private String correctAnswer;
+
+    @Column(name = "explanation", columnDefinition = "NVARCHAR(1000)")
+    private String explanation;
+
+    @Column(name = "image_url")
     private String imageUrl;
 
+    @Column(name = "audio_url")
     private String audioUrl;
 
-    private String questionText;
+    @Column(name = "question_order")
+    private Integer questionOrder;
+
+    @Column(name = "points")
+    private Integer points = 1;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

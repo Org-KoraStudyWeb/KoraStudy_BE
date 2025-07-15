@@ -10,7 +10,10 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/**").allowedOrigins("http://localhost:8080") // hoặc * nếu muốn tạm mở
-                .allowedMethods("*").allowedHeaders("*");
+        registry.addMapping("/**")
+                .allowedOrigins("http://localhost:3030", "http://localhost:8080","http://localhost:3000") // Add React dev server port
+                .allowedMethods("*")
+                .allowedHeaders("*")
+                .allowCredentials(true);
     }
 }

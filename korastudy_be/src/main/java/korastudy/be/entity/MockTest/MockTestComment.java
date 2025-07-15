@@ -21,7 +21,7 @@ public class MockTestComment extends BaseTimeEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "test_context_context")
+    @Column(name = "test_context_context ,")
     private String context;
 
     @Column(name = "test_comment_published")
