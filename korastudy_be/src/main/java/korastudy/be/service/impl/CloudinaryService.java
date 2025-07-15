@@ -21,14 +21,11 @@ public class CloudinaryService {
         }
 
         Map<String, Object> uploadParams = ObjectUtils.asMap(
-            "resource_type", "image",
-            "folder", "korastudy/exam-images",
-            "transformation", ObjectUtils.asMap(
-                "quality", "auto",
-                "fetch_format", "auto"
-            )
+                "resource_type", "image",
+                "folder", "korastudy/exam-images",
+                "transformation", "q_auto" // ✅ Cách viết đúng
         );
-        
+
         Map uploadResult = cloudinary.uploader().upload(file.getBytes(), uploadParams);
         return uploadResult.get("secure_url").toString();
     }
