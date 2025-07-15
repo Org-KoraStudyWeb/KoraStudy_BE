@@ -7,6 +7,7 @@ import lombok.Data;
 public class AccountResponse {
     private Long id;
     private String username;
+    private String email;
     private String firstName;
     private String lastName;
 
@@ -14,6 +15,8 @@ public class AccountResponse {
         AccountResponse res = new AccountResponse();
         res.setId(account.getId());
         res.setUsername(account.getUsername());
+        res.setEmail(account.getEmail());
+
         if (account.getUser() != null) {
             res.setFirstName(account.getUser().getFirstName());
             res.setLastName(account.getUser().getLastName());
