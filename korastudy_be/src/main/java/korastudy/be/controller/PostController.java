@@ -1,23 +1,21 @@
 package korastudy.be.controller;
 
-import korastudy.be.dto.request.blog.*;
+import korastudy.be.dto.request.blog.CreatePostRequest;
+import korastudy.be.dto.request.blog.PostMetaRequest;
+import korastudy.be.dto.request.blog.UpdatePostRequest;
 import korastudy.be.dto.response.blog.PostMetaResponse;
 import korastudy.be.dto.response.blog.PostResponse;
-import korastudy.be.entity.Post.Post;
-import korastudy.be.entity.Post.PostMeta;
-import korastudy.be.entity.User.Account;
-import korastudy.be.repository.AccountRepository;
-import korastudy.be.repository.blog.PostMetaRepository;
-import korastudy.be.repository.blog.PostRepository;
+import korastudy.be.payload.response.ApiError;
 import korastudy.be.security.userprinciple.AccountDetailsImpl;
+import korastudy.be.service.IPostService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 
 @RestController
@@ -25,176 +23,127 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PostController {
 
-    private final PostRepository postRepository;
-    private final PostMetaRepository postMetaRepository;
-    private final AccountRepository accountRepository;
+    private final IPostService postService;
 
-    //  PUBLIC: Lấy tất cả bài viết
+    /**
+     * PUBLIC: Lấy tất cả bài viết
+     */
     @GetMapping
-    public List<PostResponse> getAllPosts() {
-        return postRepository.findAll().stream()
-                .map(PostResponse::fromEntity)
-                .toList();
+    public ResponseEntity<List<PostResponse>> getAllPosts() {
+        List<PostResponse> posts = postService.getAllPosts();
+        return ResponseEntity.ok(posts);
     }
 
-    //  PUBLIC: Lấy chi tiết bài viết
+    /**
+     * PUBLIC: Lấy chi tiết bài viết
+     */
     @GetMapping("/{id}")
-    public PostResponse getPostById(@PathVariable Long id) {
-        Post post = postRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Post not found"));
-        return PostResponse.fromEntity(post);
+    public ResponseEntity<PostResponse> getPostById(@PathVariable Long id) {
+        PostResponse post = postService.getPostById(id);
+        return ResponseEntity.ok(post);
     }
 
-    //  PUBLIC: Lấy metas
+    /**
+     * PUBLIC: Lấy metas của bài viết
+     */
     @GetMapping("/{id}/meta")
-    public List<PostMetaResponse> getPostMeta(@PathVariable Long id) {
-        Post post = postRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Post not found"));
-        return post.getMetas().stream()
-                .map(PostMetaResponse::fromEntity)
-                .toList();
+    public ResponseEntity<List<PostMetaResponse>> getPostMeta(@PathVariable Long id) {
+        List<PostMetaResponse> metas = postService.getPostMeta(id);
+        return ResponseEntity.ok(metas);
     }
 
-    //  USER/ADMIN: Tạo bài viết mới
+    /**
+     * USER/ADMIN: Tạo bài viết mới kèm category
+     */
     @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
     @PostMapping
-    public PostResponse createPost(@RequestBody CreatePostRequest request) {
-        Post post = new Post();
-        post.setPostTitle(request.getPostTitle());
-        post.setPostSummary(request.getPostSummary());
-        post.setPostContent(request.getPostContent());
-        post.setPublished(request.getPostPublished());
-        post.setCreatedAt(LocalDateTime.now());
-        post.setLastModified(LocalDateTime.now());
-
-        // 🟢 Gán người tạo - LẤY ID TỪ TOKEN ĐANG ĐĂNG NHẬP
-        Long currentUserId = getCurrentUserId();
-        Account author = accountRepository.findById(currentUserId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        post.setCreatedBy(author);
-
-        // Xử lý metas nếu có
-        if (request.getPostMetas() != null) {
-            List<PostMeta> metas = request.getPostMetas().stream().map(metaReq -> {
-                PostMeta meta = new PostMeta();
-                meta.setMetaKey(metaReq.getMetaKey());
-                meta.setPostMetaContext(metaReq.getPostMetaContext());
-                meta.setPost(post);
-                return meta;
-            }).toList();
-            post.setMetas(metas);
-        }
-
-        postRepository.save(post);
-        return PostResponse.fromEntity(post);
+    public ResponseEntity<PostResponse> createPost(
+            @RequestBody CreatePostRequest request,
+            @AuthenticationPrincipal AccountDetailsImpl currentUser) {
+        PostResponse post = postService.createPost(request, currentUser);
+        return ResponseEntity.status(HttpStatus.CREATED).body(post);
     }
 
-
-    //  USER/ADMIN: Cập nhật bài viết của chính mình
+    /**
+     * USER/ADMIN: Cập nhật bài viết
+     */
     @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
     @PutMapping("/{id}")
-    public PostResponse updatePost(@PathVariable Long id, @RequestBody UpdatePostRequest request) {
-        Post post = postRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Post not found"));
-
-        Long currentUserId = getCurrentUserId();
-        boolean isOwner = post.getCreatedBy().getId().equals(currentUserId);
-
-        // Nếu không phải admin thì chỉ được cập nhật bài của mình
-        if (!isCurrentUserAdmin() && !isOwner) {
-            throw new RuntimeException("You do not have permission to update this post");
+    public ResponseEntity<?> updatePost(
+            @PathVariable Long id,
+            @RequestBody UpdatePostRequest request,
+            @AuthenticationPrincipal AccountDetailsImpl currentUser) {
+        try {
+            PostResponse post = postService.updatePost(id, request, currentUser);
+            return ResponseEntity.ok(post);
+        } catch (AccessDeniedException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiError.of(e.getMessage()));
         }
-
-        post.setPostTitle(request.getPostTitle());
-        post.setPostSummary(request.getPostSummary());
-        post.setPostContent(request.getPostContent());
-        post.setPublished(request.getPostPublished());
-        post.setLastModified(LocalDateTime.now());
-
-        post.getMetas().clear();
-        if (request.getPostMetas() != null) {
-            request.getPostMetas().forEach(metaReq -> {
-                PostMeta meta = new PostMeta();
-                meta.setMetaKey(metaReq.getMetaKey());
-                meta.setPostMetaContext(metaReq.getPostMetaContext());
-                meta.setPost(post);
-                post.getMetas().add(meta);
-            });
-        }
-
-        postRepository.save(post);
-        return PostResponse.fromEntity(post);
     }
 
-    //  ADMIN: Xóa bài
+    /**
+     * ADMIN: Xóa bài viết
+     */
     @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
-    public void deletePost(@PathVariable Long id) {
-        Post post = postRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Post not found"));
-        postRepository.delete(post);
+    public ResponseEntity<Void> deletePost(@PathVariable Long id) {
+        postService.deletePost(id);
+        return ResponseEntity.noContent().build();
     }
 
-    //  USER/ADMIN: Thêm 1 meta
+    /**
+     * USER/ADMIN: Thêm meta cho bài viết
+     */
     @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
     @PostMapping("/{id}/meta")
-    public PostMetaResponse addPostMeta(@PathVariable Long id, @RequestBody PostMetaRequest request) {
-        Post post = postRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Post not found"));
-        PostMeta meta = new PostMeta();
-        meta.setMetaKey(request.getMetaKey());
-        meta.setPostMetaContext(request.getPostMetaContext());
-        meta.setPost(post);
-        postMetaRepository.save(meta);
-        return PostMetaResponse.fromEntity(meta);
+    public ResponseEntity<?> addPostMeta(
+            @PathVariable Long id,
+            @RequestBody PostMetaRequest request,
+            @AuthenticationPrincipal AccountDetailsImpl currentUser) {
+        try {
+            PostMetaResponse meta = postService.addPostMeta(id, request, currentUser);
+            return ResponseEntity.status(HttpStatus.CREATED).body(meta);
+        } catch (AccessDeniedException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiError.of(e.getMessage()));
+        }
     }
 
-    //  USER/ADMIN: Cập nhật 1 meta
+    /**
+     * USER/ADMIN: Cập nhật meta của bài viết
+     */
     @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
     @PutMapping("/{postId}/meta/{metaId}")
-    public PostMetaResponse updatePostMeta(
+    public ResponseEntity<?> updatePostMeta(
             @PathVariable Long postId,
             @PathVariable Long metaId,
-            @RequestBody PostMetaRequest request
-    ) {
-        PostMeta meta = postMetaRepository.findById(metaId)
-                .orElseThrow(() -> new RuntimeException("Meta not found"));
-
-        if (!meta.getPost().getId().equals(postId)) {
-            throw new RuntimeException("Meta does not belong to this post");
+            @RequestBody PostMetaRequest request,
+            @AuthenticationPrincipal AccountDetailsImpl currentUser) {
+        try {
+            PostMetaResponse meta = postService.updatePostMeta(postId, metaId, request, currentUser);
+            return ResponseEntity.ok(meta);
+        } catch (AccessDeniedException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiError.of(e.getMessage()));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiError.of(e.getMessage()));
         }
-
-        meta.setMetaKey(request.getMetaKey());
-        meta.setPostMetaContext(request.getPostMetaContext());
-        postMetaRepository.save(meta);
-        return PostMetaResponse.fromEntity(meta);
     }
 
-    //  USER/ADMIN: Xóa 1 meta
+    /**
+     * USER/ADMIN: Xóa meta của bài viết
+     */
     @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
     @DeleteMapping("/{postId}/meta/{metaId}")
-    public void deletePostMeta(@PathVariable Long postId, @PathVariable Long metaId) {
-        PostMeta meta = postMetaRepository.findById(metaId)
-                .orElseThrow(() -> new RuntimeException("Meta not found"));
-
-        if (!meta.getPost().getId().equals(postId)) {
-            throw new RuntimeException("Meta does not belong to this post");
+    public ResponseEntity<?> deletePostMeta(
+            @PathVariable Long postId,
+            @PathVariable Long metaId,
+            @AuthenticationPrincipal AccountDetailsImpl currentUser) {
+        try {
+            postService.deletePostMeta(postId, metaId, currentUser);
+            return ResponseEntity.noContent().build();
+        } catch (AccessDeniedException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiError.of(e.getMessage()));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiError.of(e.getMessage()));
         }
-
-        postMetaRepository.delete(meta);
-    }
-
-
-    private Long getCurrentUserId() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        AccountDetailsImpl userDetails = (AccountDetailsImpl) authentication.getPrincipal();
-        return userDetails.getId();
-    }
-
-
-    private boolean isCurrentUserAdmin() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        return authentication.getAuthorities().stream()
-                .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"));
     }
 }

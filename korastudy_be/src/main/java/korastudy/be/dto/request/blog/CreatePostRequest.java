@@ -11,5 +11,7 @@ public class CreatePostRequest {
     private String postSummary;
     private String postContent;
     private Boolean postPublished;
+    private List<Long> categoryIds;
     private List<PostMetaRequest> postMetas; // Meta đi kèm
 }
+

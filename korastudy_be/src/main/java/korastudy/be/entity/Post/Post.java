@@ -38,22 +38,30 @@ public class Post extends BaseTimeEntity {
     private LocalDateTime publishedAt;
 
     @ManyToMany
-    @JoinTable(name = "post_category",
+    @JoinTable(
+            name = "post_category",
             joinColumns = @JoinColumn(name = "post_id"),
-            inverseJoinColumns = @JoinColumn(name = "category_id"))
-    private List<Category> categories;
+            inverseJoinColumns = @JoinColumn(name = "category_id")
+    )
+    private List<Category> categories = new ArrayList<>();
 
     @ManyToMany
-    @JoinTable(name = "post_tag",
+    @JoinTable(
+            name = "post_tag",
             joinColumns = @JoinColumn(name = "post_id"),
-            inverseJoinColumns = @JoinColumn(name = "tag_id"))
-    private List<Tag> tags;
+            inverseJoinColumns = @JoinColumn(name = "tag_id")
+    )
+    private List<Tag> tags = new ArrayList<>();
 
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PostMeta> metas = new ArrayList<>();
 
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PostComment> comments = new ArrayList<>();
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by")
+    private Account createdBy;
 
     public void addMeta(PostMeta meta) {
         metas.add(meta);
@@ -64,9 +72,6 @@ public class Post extends BaseTimeEntity {
         metas.remove(meta);
         meta.setPost(null);
     }
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "created_by")
-    private Account createdBy;
 
     public void addComment(PostComment comment) {
         comments.add(comment);
@@ -84,7 +89,3 @@ public class Post extends BaseTimeEntity {
     }
 
 }
-
-
-
-

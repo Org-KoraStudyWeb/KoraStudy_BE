@@ -29,5 +29,4 @@ public class Category extends BaseTimeEntity {
     @ManyToMany(mappedBy = "categories")
     private List<Post> posts;
 
-
 }
