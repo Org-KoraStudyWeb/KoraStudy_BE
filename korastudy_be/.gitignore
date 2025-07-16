@@ -31,8 +31,8 @@ build/
 
 ### VS Code ###
 .vscode/
-### .idea ###
-.idea/KoraStudy_BE.iml
-.idea/misc.xml
-.idea/vcs.xml
+
+# Ignore IntelliJ IDEA project files
+.idea/
+*.iml
 
