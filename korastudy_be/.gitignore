@@ -31,3 +31,8 @@ build/
 
 ### VS Code ###
 .vscode/
+### .idea ###
+.idea/KoraStudy_BE.iml
+.idea/misc.xml
+.idea/vcs.xml
+
