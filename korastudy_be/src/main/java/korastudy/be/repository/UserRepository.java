@@ -1,29 +1,35 @@
 package korastudy.be.repository;
 
+import korastudy.be.entity.Enum.RoleName;
 import korastudy.be.entity.User.Account;
 import korastudy.be.entity.User.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
 
-    // Find user by account ID (method name-based)
+    /*
+    ThienTDV - các chức năng liên quan đến account
+     */
+
+    //Tìm hồ sơ theo account ID
     Optional<User> findByAccountId(Long accountId);
 
     boolean existsByUserCode(String UserCode);
 
-    // Find user by account.username
+    //Tìm user theo account.username (cho /me) **************** Có thể phát triển thêm
     @Query("SELECT u FROM User u WHERE u.account.username = :username")
     Optional<User> findByUsername(@Param("username") String username);
 
-    // Soft delete user by userCode
+    // Vô hiệu hóa người dùng (soft delete)
     @Modifying
     @Query("UPDATE User u SET u.isEnable = false WHERE u.userCode = :userCode")
     void deleteByUserCode(String UserCode);
@@ -34,21 +40,20 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByUserCode(String userCode);
 
-    // Debug: find by id
-    @Query("SELECT u FROM User u WHERE u.id = :id")
-    Optional<User> findByIdCustom(@Param("id") Long id);
+    // Tìm kiếm users
+    Page<User> findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCaseOrEmailContainingIgnoreCaseOrUserCodeContainingIgnoreCase(
+            String firstName, String lastName, String email, String userCode, Pageable pageable);
 
-    @Query("SELECT u FROM User u")
-    List<User> findAllUsers();
+    // Lọc theo role
+    Page<User> findByAccount_Roles_RoleName(RoleName roleName, Pageable pageable);
 
-    // Count total users for debugging
-    @Query("SELECT COUNT(u) FROM User u")
-    Long countAllUsers();
+    // Lọc theo status
+    Page<User> findByIsEnable(Boolean isEnable, Pageable pageable);
 
-    // Find user by email
-    Optional<User> findByEmail(String email);
+    // Đếm theo role
+    long countByAccount_Roles_RoleName(RoleName roleName);
 
-    // Debug: get all users with account info
-    @Query("SELECT u FROM User u LEFT JOIN FETCH u.account")
-    List<User> findAllWithAccount();
+    // Đếm theo status
+    long countByIsEnableTrue();
+    long countByIsEnableFalse();
 }

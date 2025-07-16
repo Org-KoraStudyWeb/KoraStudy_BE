@@ -10,7 +10,7 @@ import korastudy.be.repository.UserRepository;
 import korastudy.be.repository.blog.PostCommentRepository;
 import korastudy.be.repository.blog.PostRepository;
 import korastudy.be.security.userprinciple.AccountDetailsImpl;
-import korastudy.be.service.ICommentService;
+import korastudy.be.service.IBlogCommentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -22,7 +22,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class CommentService implements ICommentService {
+public class CommentService implements IBlogCommentService {
 
     private final PostRepository postRepository;
     private final UserRepository userRepository;

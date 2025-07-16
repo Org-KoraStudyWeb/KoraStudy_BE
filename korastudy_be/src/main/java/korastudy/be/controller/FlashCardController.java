@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
@@ -33,14 +34,7 @@ public class FlashCardController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * Lấy danh sách bộ flashcard hệ thống (không gán user)
-     */
-    @GetMapping("/system")
-    public ResponseEntity<List<Map<String, Object>>> getSystemFlashcardSets() {
-        List<Map<String, Object>> response = flashCardService.getSystemFlashcardSets();
-        return ResponseEntity.ok(response);
-    }
+
 
     /**
      * Xem chi tiết 1 bộ flashcard
@@ -76,15 +70,6 @@ public class FlashCardController {
     }
 
     /**
-     * Tạo bộ flashcard hệ thống (admin)
-     */
-    @PostMapping("/system")
-    public ResponseEntity<ApiSuccess> createSystemFlashcardSet(@RequestBody SetCardRequest request) {
-        flashCardService.createSystemFlashcardSet(request);
-        return ResponseEntity.ok(ApiSuccess.of("Flashcard system set created successfully!"));
-    }
-
-    /**
      * Xóa bộ flashcard của user
      */
     @DeleteMapping("/{setId}")
@@ -114,4 +99,54 @@ public class FlashCardController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiError.of(e.getMessage()));
         }
     }
+
+    /**
+     * Lấy danh sách bộ flashcard hệ thống (không gán user)
+     */
+    @GetMapping("/system")
+    public ResponseEntity<List<Map<String, Object>>> getSystemFlashcardSets() {
+        List<Map<String, Object>> response = flashCardService.getSystemFlashcardSets();
+        return ResponseEntity.ok(response);
+    }
+    
+    /**
+     * Tạo bộ flashcard hệ thống (admin)
+     */
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/system")
+    public ResponseEntity<ApiSuccess> createSystemFlashcardSet(@RequestBody SetCardRequest request) {
+        flashCardService.createSystemFlashcardSet(request);
+        return ResponseEntity.ok(ApiSuccess.of("Flashcard system set created successfully!"));
+    }
+
+    /**
+     * Cập nhật bộ flashcard hệ thống (chỉ admin)
+     */
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/system/{setId}")
+    public ResponseEntity<?> updateSystemFlashcardSet(
+            @PathVariable Long setId,
+            @RequestBody SetCardRequest request) {
+        try {
+            flashCardService.updateSystemFlashcardSet(setId, request);
+            return ResponseEntity.ok(ApiSuccess.of("Đã cập nhật bộ flashcard hệ thống thành công!"));
+        } catch (AccessDeniedException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiError.of(e.getMessage()));
+        }
+    }
+
+    /**
+     * Xóa bộ flashcard hệ thống (chỉ admin)
+     */
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/system/{setId}")
+    public ResponseEntity<?> deleteSystemFlashcardSet(@PathVariable Long setId) {
+        try {
+            flashCardService.deleteSystemFlashcardSet(setId);
+            return ResponseEntity.ok(ApiSuccess.of("Đã xóa bộ flashcard hệ thống thành công!"));
+        } catch (AccessDeniedException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiError.of(e.getMessage()));
+        }
+    }
+
 }
