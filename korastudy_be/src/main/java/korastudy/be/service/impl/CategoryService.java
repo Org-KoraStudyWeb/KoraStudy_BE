@@ -5,7 +5,7 @@ import korastudy.be.dto.response.blog.CategoryResponse;
 import korastudy.be.entity.Post.Category;
 import korastudy.be.exception.ResourceNotFoundException;
 import korastudy.be.repository.blog.CategoryRepository;
-import korastudy.be.service.ICategoryService;
+import korastudy.be.service.IBlogCategoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,7 +15,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class CategoryService implements ICategoryService {
+public class CategoryService implements IBlogCategoryService {
 
     private final CategoryRepository categoryRepository;
 

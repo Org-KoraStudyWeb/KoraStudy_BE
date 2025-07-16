@@ -23,8 +23,6 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
     //Tìm tất cả theo username
     Optional<Account> findByUsername(String username);
 
-    Optional<Account> findAccountByUsername(String username);
-
     //Tìm tất cả account có role cụ thể (cho admin)
     @Query("SELECT a FROM Account a JOIN a.roles r WHERE r.roleName = :roleName")
     List<Account> findAllByRole(@Param("roleName") String roleName);
@@ -33,6 +31,10 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
     boolean existsByEmail(String email);
 
     boolean existsByUsername(String username);
+
+    // Check unique constraints với exclusion
+    boolean existsByEmailAndIdNot(String email, Long id);
+    boolean existsByUsernameAndIdNot(String username, Long id);
 
     /*
     ThienTDV - login, xác thực và phân quyền
@@ -65,4 +67,10 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
     @Query("UPDATE Account a SET a.isEnabled = false WHERE a.id = :accountId")
     void disableAccount(@Param("accountId") Long accountId);
 
+    // Đếm theo role
+    long countByRoles_RoleName(RoleName roleName);
+
+    // Find account by username
+    @Query("SELECT a FROM Account a WHERE a.username = :username")
+    Optional<Account> findAccountByUsername(@Param("username") String username);
 }

@@ -5,7 +5,7 @@ import korastudy.be.dto.response.blog.CategoryResponse;
 
 import java.util.List;
 
-public interface ICategoryService {
+public interface IBlogCategoryService {
 
     // Public endpoints
     List<CategoryResponse> getAllCategories();

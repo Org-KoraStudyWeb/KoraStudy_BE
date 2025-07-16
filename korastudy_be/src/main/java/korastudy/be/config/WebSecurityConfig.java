@@ -66,6 +66,7 @@ public class WebSecurityConfig {
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/content/**").hasRole("CONTENT_MANAGER")
                         .requestMatchers("/api/delivery/**").hasRole("DELIVERY_MANAGER")
+                        .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
 
                         // Các request còn lại bắt buộc phải xác thực
                         .anyRequest().authenticated()

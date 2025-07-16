@@ -6,7 +6,7 @@ import korastudy.be.security.userprinciple.AccountDetailsImpl;
 
 import java.util.List;
 
-public interface ICommentService {
+public interface IBlogCommentService {
 
     // Lấy tất cả comment của 1 post
     List<PostCommentResponse> getAllComments(Long postId);
