@@ -6,6 +6,7 @@ import korastudy.be.entity.User.User;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -13,15 +14,14 @@ import java.time.LocalDateTime;
 @Setter
 @Builder
 @Entity
-@Table(name = "practice_test_result")
+@Table(name = "practice_test_results")
 public class PracticeTestResult extends BaseTimeEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-
-    @Column(name = "test_type")
-    private String testType;
+    @Column(name = "test_type", columnDefinition = "NVARCHAR(50)")
+    private String testType = "PRACTICE";
 
     @Column(name = "test_date")
     private LocalDateTime testDate;
@@ -32,11 +32,33 @@ public class PracticeTestResult extends BaseTimeEntity {
     @Column(name = "no_incorrect")
     private Integer noIncorrect;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    @Column(name = "total_questions")
+    private Integer totalQuestions;
+
+    @Column(name = "scores")
+    private Double scores;
+
+    @Column(name = "earned_points")
+    private Integer earnedPoints;
+
+    @Column(name = "total_points")
+    private Integer totalPoints;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "test_id", nullable = false)
+    @JoinColumn(name = "mock_test_id")
     private MockTest mockTest;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User user;
+
+    @ElementCollection
+    @CollectionTable(name = "practice_test_parts", joinColumns = @JoinColumn(name = "result_id"))
+    @Column(name = "part_id")
+    private List<Long> completedParts;
+
+    @PrePersist
+    protected void onCreate() {
+        testDate = LocalDateTime.now();
+    }
 }
