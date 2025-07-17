@@ -1,5 +1,6 @@
 package korastudy.be.controller;
 
+import korastudy.be.dto.request.Exam.ExamCommentRequest;
 import korastudy.be.dto.request.Exam.SubmitAnswerRequest;
 import korastudy.be.dto.request.Exam.SubmitExamRequest;
 import korastudy.be.dto.response.Exam.ExamCommentResponse;
@@ -124,35 +125,12 @@ public class ExamController {
     }
 
     /**
-     * Lấy kết quả chi tiết một lần thi cụ thể
-     */
-    @GetMapping("/result/{resultId}")
-    public ResponseEntity<ExamResultResponse> getExamResultDetail(@PathVariable Long resultId) {
-        try {
-            System.out.println("Getting exam result detail for resultId: " + resultId);
-            ExamResultResponse result = examService.getExamResultDetail(resultId);
-            return ResponseEntity.ok(result);
-        } catch (Exception e) {
-            System.err.println("Error getting exam result detail: " + e.getMessage());
-            e.printStackTrace();
-            return ResponseEntity.status(404).build();
-        }
-    }
-
-    /**
      * Lấy lịch sử làm bài của user
      */
     @GetMapping("/history")
     public ResponseEntity<List<ExamResultResponse>> getExamHistory(@RequestParam Long userId) {
-        try {
-            System.out.println("Getting exam history for userId: " + userId);
-            List<ExamResultResponse> history = examService.getExamHistory(userId);
-            return ResponseEntity.ok(history);
-        } catch (Exception e) {
-            System.err.println("Error getting exam history: " + e.getMessage());
-            e.printStackTrace();
-            return ResponseEntity.status(500).build();
-        }
+        List<ExamResultResponse> history = examService.getExamHistory(userId);
+        return ResponseEntity.ok(history);
     }
 
     /**
@@ -168,6 +146,15 @@ public class ExamController {
     ) {
         List<ExamListItemResponse> exams = examService.searchExams(title, level, type, page, size);
         return ResponseEntity.ok(exams);
+    }
+
+    /**
+     * Lấy kết quả chi tiết một lần thi cụ thể
+     */
+    @GetMapping("/result/{resultId}")
+    public ResponseEntity<ExamResultResponse> getExamResultDetail(@PathVariable Long resultId) {
+        ExamResultResponse result = examService.getExamResultDetail(resultId);
+        return ResponseEntity.ok(result);
     }
 
     /**
@@ -203,10 +190,9 @@ public class ExamController {
     @PostMapping("/{id}/comments")
     public ResponseEntity<ExamCommentResponse> addExamComment(
             @PathVariable Long id,
-            @RequestParam String context,
-            @RequestParam Long userId
+            @RequestBody ExamCommentRequest request
     ) {
-        ExamCommentResponse comment = examService.addExamComment(id, context, userId);
+        ExamCommentResponse comment = examService.addExamComment(id, request.getContext(), request.getUserId());
         return ResponseEntity.ok(comment);
     }
 }

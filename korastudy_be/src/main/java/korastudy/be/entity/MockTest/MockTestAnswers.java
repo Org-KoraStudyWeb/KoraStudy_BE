@@ -22,6 +22,8 @@ public class MockTestAnswers extends BaseTimeEntity {
 
     private Boolean isCorrect;
 
+    private String explain ;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "part_id")
     private MockTestPart answerPart;
@@ -29,4 +31,6 @@ public class MockTestAnswers extends BaseTimeEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "question_id", nullable = false)
     private MockTestQuestion questionAnswer;
+
+
 }

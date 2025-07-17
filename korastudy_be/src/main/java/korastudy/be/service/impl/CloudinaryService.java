@@ -23,7 +23,7 @@ public class CloudinaryService {
         Map<String, Object> uploadParams = ObjectUtils.asMap(
                 "resource_type", "image",
                 "folder", "korastudy/exam-images",
-                "transformation", "q_auto" // ✅ Cách viết đúng
+                "transformation", "q_auto" //
         );
 
         Map uploadResult = cloudinary.uploader().upload(file.getBytes(), uploadParams);
