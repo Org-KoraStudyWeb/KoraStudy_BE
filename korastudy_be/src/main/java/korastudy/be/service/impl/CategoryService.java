@@ -37,8 +37,8 @@ public class CategoryService implements IBlogCategoryService {
     @Override
     public CategoryResponse createCategory(CategoryRequest request) {
         Category category = Category.builder()
-                .categoryTitle(request.getCategoryTitle())
-                .context(request.getContext())
+                .name(request.getName()) // Thay đổi từ categoryTitle sang name
+                .description(request.getDescription()) // Thay đổi từ context sang description
                 .build();
         // BaseTimeEntity sẽ tự động set createdAt và lastModified
 
@@ -50,8 +50,8 @@ public class CategoryService implements IBlogCategoryService {
     public CategoryResponse updateCategory(Long id, CategoryRequest request) {
         Category category = getCategoryEntityById(id);
 
-        category.setCategoryTitle(request.getCategoryTitle());
-        category.setContext(request.getContext());
+        category.setName(request.getName()); // Thay đổi từ setCategoryTitle sang setName
+        category.setDescription(request.getDescription()); // Thay đổi từ setContext sang setDescription
         // BaseTimeEntity sẽ tự động update lastModified
 
         categoryRepository.save(category);
