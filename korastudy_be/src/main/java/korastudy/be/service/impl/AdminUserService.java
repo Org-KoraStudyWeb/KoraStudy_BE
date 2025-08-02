@@ -238,7 +238,7 @@ public class AdminUserService implements IAdminUserService {
         Notification notification = Notification.builder()
                 .title(title)
                 .content(content)
-                .isPublished(true)
+                .read(true)
                 .user(user)
                 .build();
         notificationRepository.save(notification);

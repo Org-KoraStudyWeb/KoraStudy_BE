@@ -57,7 +57,7 @@ public class UserService implements IUserService {
         List<Account> admins = accountRepository.findAllByRoles_RoleName(RoleName.ADMIN);
 
         for (Account admin : admins) {
-            Notification notification = Notification.builder().title("Yêu cầu xác nhận hồ sơ mới").content("Nhân viên " + user.getLastName() + " vừa cập nhật hồ sơ cá nhân và chờ phê duyệt.").isPublished(false).user(admin.getUser()) // gắn cho admin
+            Notification notification = Notification.builder().title("Yêu cầu xác nhận hồ sơ mới").content("Nhân viên " + user.getLastName() + " vừa cập nhật hồ sơ cá nhân và chờ phê duyệt.").read(false).user(admin.getUser()) // gắn cho admin
                     .build();
             notificationRepository.save(notification);
         }
