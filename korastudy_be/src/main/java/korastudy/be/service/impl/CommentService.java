@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -31,10 +32,11 @@ public class CommentService implements IBlogCommentService {
     @Override
     @Transactional(readOnly = true)
     public List<PostCommentResponse> getAllComments(Long postId) {
-        Post post = getPostById(postId);
-        return post.getComments().stream()
-                .map(PostCommentResponse::fromEntity)
-                .toList();
+    // Only return top-level comments; children are nested in response
+    List<PostComment> roots = postCommentRepository.findByPostIdAndParentIsNull(postId);
+    return roots.stream()
+        .map(PostCommentResponse::fromEntity)
+        .collect(Collectors.toList());
     }
 
     @Override
@@ -49,6 +51,14 @@ public class CommentService implements IBlogCommentService {
                 .post(post)
                 .user(user)
                 .build();
+
+        // If replying to an existing comment
+        if (request.getParentId() != null) {
+            PostComment parent = getCommentById(request.getParentId());
+            // Ensure the parent belongs to the same post
+            validateCommentBelongsToPost(parent, postId);
+            comment.setParent(parent);
+        }
 
         postCommentRepository.save(comment);
         return PostCommentResponse.fromEntity(comment);
@@ -66,7 +76,7 @@ public class CommentService implements IBlogCommentService {
 
         comment.setContext(request.getContext());
         comment.setLastModified(LocalDateTime.now());
-        postCommentRepository.save(comment);
+    postCommentRepository.save(comment);
 
         return PostCommentResponse.fromEntity(comment);
     }
@@ -81,7 +91,7 @@ public class CommentService implements IBlogCommentService {
         // Check permissions
         validateUserPermission(comment, currentUser);
 
-        postCommentRepository.delete(comment);
+    postCommentRepository.delete(comment);
     }
 
     // Helper methods

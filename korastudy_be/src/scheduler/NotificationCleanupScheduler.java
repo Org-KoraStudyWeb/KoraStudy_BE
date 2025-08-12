@@ -17,9 +17,10 @@ public class NotificationCleanupScheduler {
     private final NotificationRepository notificationRepository;
 
     /**
-     * Xóa thông báo hết hạn hàng ngày vào lúc 1 giờ sáng
+     * Xóa thông báo hết hạn mỗi 15 phút
+     * Thay đổi lịch chạy từ mỗi ngày sang mỗi 15 phút vì thông báo giờ hết hạn nhanh hơn
      */
-    @Scheduled(cron = "0 0 1 * * ?") // Chạy lúc 1:00 AM mỗi ngày
+    @Scheduled(fixedRate = 15 * 60 * 1000) // Chạy mỗi 15 phút
     @Transactional
     public void cleanupExpiredNotifications() {
         LocalDateTime now = LocalDateTime.now();

@@ -21,5 +21,11 @@ public interface PostCommentRepository extends JpaRepository<PostComment, Long> 
     List<PostComment> findByIsPublishedTrue();
 
     Page<PostComment> findByPostId(Long postId, Pageable pageable);
+
+    // Get only top-level comments (no parent) for a post
+    List<PostComment> findByPostIdAndParentIsNull(Long postId);
+
+    // Get replies for a given parent comment
+    List<PostComment> findByParentId(Long parentId);
 }
 
