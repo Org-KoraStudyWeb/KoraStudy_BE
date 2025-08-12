@@ -37,7 +37,7 @@ public class PostService implements IPostService {
     @Override
     @Transactional(readOnly = true)
     public List<PostResponse> getAllPosts() {
-        return postRepository.findAll().stream()
+    return postRepository.findAllByDeletedAtIsNull().stream()
                 .map(PostResponse::fromEntity)
                 .toList();
     }
@@ -45,7 +45,7 @@ public class PostService implements IPostService {
     @Override
     @Transactional(readOnly = true)
     public PostResponse getPostById(Long id) {
-        Post post = getPostEntityById(id);
+    Post post = getPostEntityById(id);
         return PostResponse.fromEntity(post);
     }
 
@@ -125,8 +125,11 @@ public class PostService implements IPostService {
 
     @Override
     public void deletePost(Long id) {
-        Post post = getPostEntityById(id);
-        postRepository.delete(post);
+    Post post = getPostEntityById(id);
+    // Soft delete: mark deleted timestamp instead of physical removal
+    post.setDeletedAt(java.time.LocalDateTime.now());
+    // No need to remove relations thanks to orphanRemoval; keep history
+    postRepository.save(post);
     }
 
     @Override
@@ -180,7 +183,7 @@ public class PostService implements IPostService {
 
     // Helper methods
     private Post getPostEntityById(Long id) {
-        return postRepository.findById(id)
+    return postRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Post not found with id: " + id));
     }
 

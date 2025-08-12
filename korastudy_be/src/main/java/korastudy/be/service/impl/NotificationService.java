@@ -2,6 +2,8 @@ package korastudy.be.service.impl;
 
 import korastudy.be.dto.request.notification.SystemNotificationRequest;
 import korastudy.be.dto.response.notification.NotificationResponse;
+import korastudy.be.dto.response.notification.RealTimeNotificationResponse;
+import korastudy.be.entity.Enum.NotificationType;
 import korastudy.be.entity.Notification;
 import korastudy.be.entity.User.User;
 import korastudy.be.exception.ResourceNotFoundException;
@@ -9,6 +11,7 @@ import korastudy.be.repository.NotificationRepository;
 import korastudy.be.repository.UserRepository;
 import korastudy.be.service.INotificationService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +25,7 @@ public class NotificationService implements INotificationService {
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final SimpMessagingTemplate messagingTemplate; // WebSocket messaging template
 
     @Override
     public void notifyProfileRequired(User user, String roleName) {
@@ -30,8 +34,13 @@ public class NotificationService implements INotificationService {
                 .content("Bạn đã được cấp tài khoản với quyền " + roleName + ". Vui lòng cập nhật hồ sơ.")
                 .read(false)
                 .user(user)
+                .type(NotificationType.PROFILE)
                 .build();
-        notificationRepository.save(notification);
+        
+        Notification savedNotification = notificationRepository.save(notification);
+        
+        // Gửi thông báo real-time
+        sendRealTimeNotification(user, savedNotification);
     }
 
     @Override
@@ -41,8 +50,13 @@ public class NotificationService implements INotificationService {
                 .content("Hồ sơ cá nhân của bạn đã được admin phê duyệt.")
                 .read(false)
                 .user(user)
+                .type(NotificationType.PROFILE)
                 .build();
-        notificationRepository.save(notification);
+        
+        Notification savedNotification = notificationRepository.save(notification);
+        
+        // Gửi thông báo real-time
+        sendRealTimeNotification(user, savedNotification);
     }
 
     @Override
@@ -54,6 +68,14 @@ public class NotificationService implements INotificationService {
     public List<NotificationResponse> getUserNotifications(Long userId) {
         // Chỉ lấy các thông báo chưa hết hạn
         List<Notification> notifications = notificationRepository.findActiveNotificationsByUserId(userId);
+        return notifications.stream()
+                .map(NotificationResponse::fromEntity)
+                .collect(Collectors.toList());
+    }
+    
+    @Override
+    public List<NotificationResponse> getUserNotificationsByType(Long userId, NotificationType type) {
+        List<Notification> notifications = notificationRepository.findActiveNotificationsByUserIdAndType(userId, type);
         return notifications.stream()
                 .map(NotificationResponse::fromEntity)
                 .collect(Collectors.toList());
@@ -81,14 +103,23 @@ public class NotificationService implements INotificationService {
             // Gửi cho tất cả người dùng
             List<User> allUsers = userRepository.findAll();
             for (User user : allUsers) {
-                createNotification(user, request.getTitle(), request.getContent());
+                Notification notification = createNotification(user, request.getTitle(), 
+                        request.getContent(), NotificationType.SYSTEM, null);
+                
+                // Gửi thông báo real-time
+                sendRealTimeNotification(user, notification);
             }
         } else {
             // Gửi cho danh sách người dùng cụ thể
             for (Long userId : request.getUserIds()) {
                 User user = userRepository.findById(userId)
                         .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng với ID: " + userId));
-                createNotification(user, request.getTitle(), request.getContent());
+                
+                Notification notification = createNotification(user, request.getTitle(), 
+                        request.getContent(), NotificationType.SYSTEM, null);
+                
+                // Gửi thông báo real-time
+                sendRealTimeNotification(user, notification);
             }
         }
     }
@@ -99,14 +130,54 @@ public class NotificationService implements INotificationService {
         return notificationRepository.countUnreadActiveByUserId(userId);
     }
     
+    @Override
+    public int countUnreadNotificationsByType(Long userId, NotificationType type) {
+        return notificationRepository.countUnreadActiveByUserIdAndType(userId, type);
+    }
+    
+    @Override
+    public void sendForumInteractionNotification(User recipient, String title, String content, Long postId) {
+        Notification notification = createNotification(recipient, title, content, 
+                NotificationType.FORUM_INTERACTION, postId);
+        
+        // Gửi thông báo real-time
+        sendRealTimeNotification(recipient, notification);
+    }
+    
+    @Override
+    public void sendExamResultNotification(User recipient, String title, String content, Long examId) {
+        Notification notification = createNotification(recipient, title, content, 
+                NotificationType.EXAM_RESULT, examId);
+        
+        // Gửi thông báo real-time
+        sendRealTimeNotification(recipient, notification);
+    }
+    
     // Helper method để tạo notification
-    private Notification createNotification(User user, String title, String content) {
+    private Notification createNotification(User user, String title, String content, 
+                                           NotificationType type, Long referenceId) {
         Notification notification = Notification.builder()
                 .title(title)
                 .content(content)
                 .read(false)
                 .user(user)
+                .type(type)
+                .referenceId(referenceId)
                 .build();
         return notificationRepository.save(notification);
+    }
+    
+    // Helper method để gửi thông báo real-time
+    private void sendRealTimeNotification(User user, Notification notification) {
+        // Chuyển notification sang DTO phù hợp cho real-time
+        RealTimeNotificationResponse response = RealTimeNotificationResponse.fromEntity(notification);
+        
+        // Gửi thông báo đến client thông qua WebSocket
+        // /user/{username}/queue/notifications là destination
+        messagingTemplate.convertAndSendToUser(
+                user.getAccount().getUsername(), 
+                "/queue/notifications", 
+                response
+        );
     }
 }

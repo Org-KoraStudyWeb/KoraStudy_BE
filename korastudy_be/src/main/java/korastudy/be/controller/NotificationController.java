@@ -2,6 +2,7 @@ package korastudy.be.controller;
 
 import korastudy.be.dto.request.notification.SystemNotificationRequest;
 import korastudy.be.dto.response.notification.NotificationResponse;
+import korastudy.be.entity.Enum.NotificationType;
 import korastudy.be.entity.Notification;
 import korastudy.be.entity.User.User;
 import korastudy.be.exception.AlreadyExistsException;
@@ -11,8 +12,6 @@ import korastudy.be.service.impl.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
@@ -38,6 +37,27 @@ public class NotificationController {
     }
     
     /**
+     * Lấy thông báo theo loại
+     */
+    @GetMapping("/me/type/{type}")
+    public ResponseEntity<List<NotificationResponse>> getMyNotificationsByType(
+            Principal principal,
+            @PathVariable String type) {
+        String username = principal.getName();
+        User user = userService.getUserByAccountUsername(username)
+                .orElseThrow(() -> new AlreadyExistsException("Không tìm thấy thông tin người dùng"));
+        
+        NotificationType notificationType;
+        try {
+            notificationType = NotificationType.valueOf(type.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Loại thông báo không hợp lệ: " + type);
+        }
+        
+        return ResponseEntity.ok(notificationService.getUserNotificationsByType(user.getId(), notificationType));
+    }
+    
+    /**
      * Đếm số thông báo chưa đọc
      */
     @GetMapping("/unread-count")
@@ -46,6 +66,28 @@ public class NotificationController {
         User user = userService.getUserByAccountUsername(username)
                 .orElseThrow(() -> new AlreadyExistsException("Không tìm thấy thông tin người dùng"));
         int count = notificationService.countUnreadNotifications(user.getId());
+        return ResponseEntity.ok(Map.of("count", count));
+    }
+    
+    /**
+     * Đếm số thông báo chưa đọc theo loại
+     */
+    @GetMapping("/unread-count/type/{type}")
+    public ResponseEntity<Map<String, Integer>> getUnreadCountByType(
+            Principal principal,
+            @PathVariable String type) {
+        String username = principal.getName();
+        User user = userService.getUserByAccountUsername(username)
+                .orElseThrow(() -> new AlreadyExistsException("Không tìm thấy thông tin người dùng"));
+        
+        NotificationType notificationType;
+        try {
+            notificationType = NotificationType.valueOf(type.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Loại thông báo không hợp lệ: " + type);
+        }
+        
+        int count = notificationService.countUnreadNotificationsByType(user.getId(), notificationType);
         return ResponseEntity.ok(Map.of("count", count));
     }
     
