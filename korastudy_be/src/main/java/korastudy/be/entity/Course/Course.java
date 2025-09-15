@@ -1,61 +1,56 @@
 package korastudy.be.entity.Course;
 
 import jakarta.persistence.*;
-import korastudy.be.entity.BaseEntity.BaseTimeEntity;
-import korastudy.be.entity.Certificate;
-import korastudy.be.entity.Grammar.CourseGrammar;
-import korastudy.be.entity.Grammar.Grammar;
-import korastudy.be.entity.PaymentHistory;
-import korastudy.be.entity.Topic.Topic;
-import korastudy.be.entity.Topic.TopicGroup;
 import lombok.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
-@AllArgsConstructor
-@NoArgsConstructor
-@Getter
-@Setter
-@Builder
 @Entity
 @Table(name = "course")
-public class Course extends BaseTimeEntity {
-
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class Course {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "course_name", nullable = false, columnDefinition = "NVARCHAR(255)")
-    private String name;
+    private String courseName;
 
-    @Column(name = "course_level")
-    private String level;
+    @Column(columnDefinition = "TEXT")
+    private String courseDescription;
 
-    @Column(name = "course_description", columnDefinition = "NVARCHAR(500)")
-    private String description;
+    private String courseImageUrl;
 
-    @Column(name = "course_image_url")
-    private String imageUrl;
+    private boolean isPublished;
 
-    @Column(name = "course_price")
-    private Double price;
+    private String courseLevel;
 
-    @Column(name = "is_published")
-    private Boolean isPublished;
+    private Double coursePrice;
 
-    @OneToMany(mappedBy = "course", cascade = CascadeType.ALL)
-    private List<PaymentHistory> payments;
+    private boolean isFree;
 
-    @OneToMany(mappedBy = "course", cascade = CascadeType.ALL)
-    private List<MyCourse> myCourses;
+    private Long viewCount = 0L;
 
+    private LocalDateTime createdAt;
+    private LocalDateTime lastModified;
+
+    // Quan hệ: 1 khóa học có nhiều Section
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<CourseTest> courseTests;
+    private List<Section> sections;
 
-    @OneToOne(mappedBy = "course", cascade = CascadeType.ALL)
-    private Certificate certificate;
-
+    // Quan hệ: 1 khóa học có nhiều Quiz
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<TopicGroup> topicGroups;
+    private List<Quiz> quizzes;
 
+    // Quan hệ: 1 khóa học có nhiều Review
+    @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Review> reviews;
+
+    // Quan hệ: nhiều user đăng ký nhiều course (Enrollment)
+    @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Enrollment> enrollments;
 }
