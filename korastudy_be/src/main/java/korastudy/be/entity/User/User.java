@@ -5,8 +5,6 @@ import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import korastudy.be.entity.BaseEntity.BaseTimeEntity;
 import korastudy.be.entity.Certificate;
-import korastudy.be.entity.Course.CourseTestResult;
-import korastudy.be.entity.Course.MyCourse;
 import korastudy.be.entity.Enum.Gender;
 import korastudy.be.entity.FlashCard.SetCard;
 import korastudy.be.entity.MockTest.ComprehensiveTestResult;
@@ -23,7 +21,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Entity
-@Table(name = "users") // Make sure table name is correct
+@Table(name = "users")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -87,12 +85,6 @@ public class User extends BaseTimeEntity {
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Notification> notifications;
-
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<MyCourse> myCourses;
-
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<CourseTestResult> courseTestResults;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<TopicTestResult> topicTestResults;
