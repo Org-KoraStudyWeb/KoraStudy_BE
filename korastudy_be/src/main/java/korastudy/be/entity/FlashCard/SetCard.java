@@ -24,6 +24,7 @@ public class SetCard extends BaseTimeEntity {
     @Column(nullable = false, columnDefinition = "NVARCHAR(500)")
     private String title;
 
+    @Column(columnDefinition = "NVARCHAR(100)")
     private String category;
 
     @Column(length = 500, columnDefinition = "NVARCHAR(500)")

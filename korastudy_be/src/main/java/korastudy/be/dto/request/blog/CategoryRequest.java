@@ -4,7 +4,7 @@ import lombok.Data;
 
 @Data
 public class CategoryRequest {
-    private String categoryTitle;
-    private String context;
+    private String name;
+    private String description;
 }
 

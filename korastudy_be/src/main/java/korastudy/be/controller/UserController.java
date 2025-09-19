@@ -16,7 +16,7 @@ import java.security.Principal;
 @RestController
 @RequestMapping("/api/v1/user/")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyRole('DELIVERY_MANAGER', 'CONTENT_MANAGER', 'USER')")
+@PreAuthorize("hasAnyRole('DELIVERY_MANAGER', 'CONTENT_MANAGER', 'USER', 'ADMIN')")
 public class UserController {
     private final UserService userService;
 

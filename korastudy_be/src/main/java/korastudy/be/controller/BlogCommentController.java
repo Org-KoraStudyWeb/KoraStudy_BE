@@ -5,7 +5,7 @@ import korastudy.be.dto.response.blog.PostCommentResponse;
 import korastudy.be.payload.response.ApiError;
 import korastudy.be.payload.response.ApiSuccess;
 import korastudy.be.security.userprinciple.AccountDetailsImpl;
-import korastudy.be.service.ICommentService;
+import korastudy.be.service.IBlogCommentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,9 +18,9 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/posts")
 @RequiredArgsConstructor
-public class CommentController {
+public class BlogCommentController {
 
-    private final ICommentService commentService;
+    private final IBlogCommentService commentService;
 
     /**
      * Lấy tất cả comment của 1 post

@@ -2,7 +2,7 @@ package korastudy.be.controller;
 
 import korastudy.be.dto.request.blog.CategoryRequest;
 import korastudy.be.dto.response.blog.CategoryResponse;
-import korastudy.be.service.ICategoryService;
+import korastudy.be.service.IBlogCategoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,9 +14,9 @@ import java.util.List;
 @RestController
 @RequestMapping("api/categories")
 @RequiredArgsConstructor
-public class CategoryController {
+public class BlogCategoryController {
 
-    private final ICategoryService categoryService;
+    private final IBlogCategoryService categoryService;
 
     /**
      * PUBLIC: Lấy tất cả category

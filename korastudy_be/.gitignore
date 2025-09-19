@@ -31,3 +31,8 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Ignore IntelliJ IDEA project files
+.idea/
+*.iml
+

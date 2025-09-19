@@ -22,10 +22,10 @@ public class Post extends BaseTimeEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "post_title")
+    @Column(name = "post_title", columnDefinition = "NVARCHAR(255)")
     private String postTitle;
 
-    @Column(name = "post_summary")
+    @Column(name = "post_summary", columnDefinition = "NVARCHAR(500)")
     private String postSummary;
 
     @Column(name = "post_published")
@@ -41,7 +41,7 @@ public class Post extends BaseTimeEntity {
     @JoinTable(
             name = "post_category",
             joinColumns = @JoinColumn(name = "post_id"),
-            inverseJoinColumns = @JoinColumn(name = "category_id")
+            inverseJoinColumns = @JoinColumn(name = "category_id", referencedColumnName = "categoryId")
     )
     private List<Category> categories = new ArrayList<>();
 
@@ -87,5 +87,11 @@ public class Post extends BaseTimeEntity {
         categories.add(category);
         category.getPosts().add(this);
     }
+
+    @Column(name = "view_count")
+    private Integer viewCount = 0;
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
 
 }

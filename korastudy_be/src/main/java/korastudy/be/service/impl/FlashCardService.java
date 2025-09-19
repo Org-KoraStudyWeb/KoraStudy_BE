@@ -218,6 +218,50 @@ public class FlashCardService implements IFlashCardService {
         setCardRepository.save(setCard);
     }
 
+    @Override
+    public void updateSystemFlashcardSet(Long setId, SetCardRequest request) {
+        SetCard setCard = getSetCardById(setId);
+        
+        // Kiểm tra đây có phải flashcard hệ thống không
+        if (setCard.getUser() != null) {
+            throw new AccessDeniedException("Đây không phải là bộ flashcard hệ thống");
+        }
+        
+        setCard.setTitle(request.getTitle());
+        setCard.setDescription(request.getDescription());
+        setCard.setCategory(request.getCategory());
+        
+        // Xóa các card cũ trước (cascade sẽ xóa progress)
+        setCard.getCards().clear();
+        
+        // Thêm card mới
+        for (CardRequest c : request.getCards()) {
+            Card card = Card.builder()
+                    .term(c.getTerm())
+                    .definition(c.getDefinition())
+                    .example(c.getExample())
+                    .imageUrl(c.getImageUrl())
+                    .setCard(setCard)
+                    .build();
+            setCard.getCards().add(card);
+        }
+        
+        setCardRepository.save(setCard);
+    }
+
+    @Override
+    public void deleteSystemFlashcardSet(Long setId) {
+        SetCard setCard = getSetCardById(setId);
+        
+        // Kiểm tra đây có phải flashcard hệ thống không
+        if (setCard.getUser() != null) {
+            throw new AccessDeniedException("Đây không phải là bộ flashcard hệ thống");
+        }
+        
+        // Xóa bộ flashcard hệ thống (cascade sẽ xóa card và progress)
+        setCardRepository.delete(setCard);
+    }
+
     // Helper methods
     private User getUserByUsername(String username) {
         return userRepository.findByUsername(username)
