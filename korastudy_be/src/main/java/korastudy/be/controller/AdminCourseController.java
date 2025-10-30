@@ -35,19 +35,25 @@ public class AdminCourseController {
     private final IReviewService reviewService;
 
     @GetMapping
-    public ResponseEntity<PagedResponse<CourseDTO>> getAllCourses(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "id") String sortBy,
-            @RequestParam(defaultValue = "desc") String sortDir
+    public ResponseEntity<PagedResponse<CourseDTO>> getAllCourses(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size, @RequestParam(defaultValue = "id") String sortBy, @RequestParam(defaultValue = "desc") String sortDir, @RequestParam(required = false) String keyword // <— thêm dòng này
     ) {
         Sort sort = sortDir.equalsIgnoreCase("asc") ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
         Pageable pageable = PageRequest.of(page, size, sort);
-        
-        List<CourseDTO> courses = courseService.getAllCoursesWithPagination(pageable);
-        long totalElements = courseService.countCourses();
-        
-        return ResponseEntity.ok(new PagedResponse<>(courses, page, size, totalElements, (int) Math.ceil((double) totalElements / size)));
+
+        List<CourseDTO> courses;
+        long totalElements;
+
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            String kw = keyword.trim();
+            courses = courseService.searchCoursesWithPagination(kw, pageable);
+            totalElements = courseService.countSearchResults(kw);
+        } else {
+            courses = courseService.getAllCoursesWithPagination(pageable);
+            totalElements = courseService.countCourses();
+        }
+
+        int totalPages = (int) Math.ceil((double) totalElements / size);
+        return ResponseEntity.ok(new PagedResponse<>(courses, page, size, totalElements, totalPages));
     }
 
     @GetMapping("/{id}")
@@ -87,35 +93,27 @@ public class AdminCourseController {
         stats.put("publishedCourses", courseService.countPublishedCourses());
         stats.put("unpublishedCourses", courseService.countUnpublishedCourses());
         stats.put("totalEnrollments", enrollmentService.countTotalEnrollments());
-        
+
         return ResponseEntity.ok(stats);
     }
 
     @GetMapping("/{id}/enrollments")
-    public ResponseEntity<PagedResponse<EnrollmentDTO>> getCourseEnrollments(
-            @PathVariable Long id,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
-    ) {
+    public ResponseEntity<PagedResponse<EnrollmentDTO>> getCourseEnrollments(@PathVariable Long id, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
         Pageable pageable = PageRequest.of(page, size);
-        
+
         List<EnrollmentDTO> enrollments = enrollmentService.getCourseEnrollmentsWithPagination(id, pageable);
         long totalElements = enrollmentService.countEnrollmentsByCourseId(id);
-        
+
         return ResponseEntity.ok(new PagedResponse<>(enrollments, page, size, totalElements, (int) Math.ceil((double) totalElements / size)));
     }
 
     @GetMapping("/{id}/reviews")
-    public ResponseEntity<PagedResponse<ReviewDTO>> getCourseReviews(
-            @PathVariable Long id,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
-    ) {
+    public ResponseEntity<PagedResponse<ReviewDTO>> getCourseReviews(@PathVariable Long id, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
         Pageable pageable = PageRequest.of(page, size);
-        
+
         List<ReviewDTO> reviews = reviewService.getCourseReviewsWithPagination(id, pageable);
         long totalElements = reviewService.countReviewsByCourseId(id);
-        
+
         return ResponseEntity.ok(new PagedResponse<>(reviews, page, size, totalElements, (int) Math.ceil((double) totalElements / size)));
     }
 
@@ -125,17 +123,4 @@ public class AdminCourseController {
         return ResponseEntity.ok(ApiSuccess.of("Xóa đánh giá thành công"));
     }
 
-    @GetMapping("/search")
-    public ResponseEntity<PagedResponse<CourseDTO>> searchCourses(
-            @RequestParam String keyword,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
-    ) {
-        Pageable pageable = PageRequest.of(page, size);
-        
-        List<CourseDTO> courses = courseService.searchCoursesWithPagination(keyword, pageable);
-        long totalElements = courseService.countSearchResults(keyword);
-        
-        return ResponseEntity.ok(new PagedResponse<>(courses, page, size, totalElements, (int) Math.ceil((double) totalElements / size)));
-    }
 }

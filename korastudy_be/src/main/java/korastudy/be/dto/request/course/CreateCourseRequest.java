@@ -11,7 +11,6 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 public class CreateCourseRequest {
-
     private String name;
     private String level;
     private String description;
