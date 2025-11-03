@@ -15,6 +15,10 @@ public interface PostRepository extends JpaRepository<Post, Long>, JpaSpecificat
     long countByPublishedTrue();
     List<Post> findTop5ByOrderByViewCountDesc();
 
+    // Soft delete helpers
+    List<Post> findAllByDeletedAtIsNull();
+    java.util.Optional<Post> findByIdAndDeletedAtIsNull(Long id);
+
     @Query("SELECT SUM(p.viewCount) FROM Post p")
     Long sumViewCount();
 

@@ -1,36 +1,43 @@
 package korastudy.be.service;
 
-import korastudy.be.dto.request.course.CreateCourseRequest;
-import korastudy.be.dto.response.course.CourseResponse;
+import korastudy.be.dto.request.course.CourseCreateRequest;
+import korastudy.be.dto.request.course.CourseUpdateRequest;
+import korastudy.be.dto.response.course.CourseDTO;
 import korastudy.be.entity.Course.Course;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
 public interface ICourseService {
-
-    // Admin và deliveryManager xem tất cả khóa học
-    List<CourseResponse> getAllCourses();
-
-    //hiển thị list có phân trang
-    Page<CourseResponse> getAllCoursesPaged(Pageable pageable);
-
-    // Chỉ lấy những khóa học đã publish (cho học viên / khách truy cập)
-    List<CourseResponse> getAllPublishedCourses();
-
-    // Tìm kiếm có phân trang
-    Page<CourseResponse> searchCourses(String keyword, Pageable pageable);
-
-    // Lấy chi tiết 1 khóa học
-    CourseResponse getCourseById(Long id);
-
-    // Tạo khóa học
-    Course createCourse(CreateCourseRequest dto);
-
-    // Cập nhật khóa học
-    Course updateCourse(Long id, CreateCourseRequest dto);
-
-    // Xóa khóa học
-    void deleteCourse(Long id);
+    
+    CourseDTO createCourse(CourseCreateRequest request);
+    
+    CourseDTO updateCourse(Long courseId, CourseUpdateRequest request);
+    
+    CourseDTO getCourseById(Long courseId);
+    
+    List<CourseDTO> getAllCourses(boolean publishedOnly);
+    
+    void deleteCourse(Long courseId);
+    
+    CourseDTO publishCourse(Long courseId, boolean isPublished);
+    
+    CourseDTO incrementViewCount(Long courseId);
+    
+    List<CourseDTO> searchCourses(String keyword);
+    
+    CourseDTO mapToDTO(Course course);
+    
+    // Methods for admin panel with pagination
+    List<CourseDTO> getAllCoursesWithPagination(Pageable pageable);
+    
+    List<CourseDTO> searchCoursesWithPagination(String keyword, Pageable pageable);
+    
+    long countCourses();
+    
+    long countPublishedCourses();
+    
+    long countUnpublishedCourses();
+    
+    long countSearchResults(String keyword);
 }

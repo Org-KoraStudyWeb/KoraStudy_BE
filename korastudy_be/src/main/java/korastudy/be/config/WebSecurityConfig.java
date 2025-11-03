@@ -52,7 +52,8 @@ public class WebSecurityConfig {
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/error").permitAll()
                         .requestMatchers("/api/flashcards/system").permitAll()
-
+                        // Cho phép truy cập WebSocket
+                        .requestMatchers("/ws/**", "/ws/info").permitAll()
                         // Phân quyền theo vai trò cụ thể
                         .requestMatchers(HttpMethod.POST, "/api/v1/courses/**").hasAnyRole("ADMIN", "DELIVERY_MANAGER")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/courses/**").hasAnyRole("ADMIN", "DELIVERY_MANAGER")
@@ -70,9 +71,11 @@ public class WebSecurityConfig {
 
                         // Các request còn lại bắt buộc phải xác thực
                         .anyRequest().authenticated()
+
                 )
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+
 
         return http.build();
     }
@@ -94,4 +97,6 @@ public class WebSecurityConfig {
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
+
+    
 }

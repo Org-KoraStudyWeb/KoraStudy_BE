@@ -7,4 +7,6 @@ import lombok.Setter;
 @Setter
 public class PostCommentRequest {
     private String context;
+    // Optional parent comment id to create a reply; null for top-level
+    private Long parentId;
 }

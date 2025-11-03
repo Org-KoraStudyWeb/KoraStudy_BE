@@ -1,102 +1,197 @@
 package korastudy.be.service.impl;
 
-import korastudy.be.dto.request.course.CreateCourseRequest;
-import korastudy.be.dto.response.course.CourseResponse;
+import korastudy.be.dto.request.course.CourseCreateRequest;
+import korastudy.be.dto.request.course.CourseUpdateRequest;
+import korastudy.be.dto.response.course.CourseDTO;
+import korastudy.be.dto.response.course.SectionDTO;
 import korastudy.be.entity.Course.Course;
-import korastudy.be.entity.Topic.TopicGroup;
-import korastudy.be.mapper.CourseMapper;
+import korastudy.be.exception.ResourceNotFoundException;
 import korastudy.be.repository.CourseRepository;
-import korastudy.be.repository.TopicGroupRepository;
+import korastudy.be.repository.EnrollmentRepository;
+import korastudy.be.repository.ReviewRepository;
 import korastudy.be.service.ICourseService;
+import korastudy.be.service.ISectionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class CourseService implements ICourseService {
+
     private final CourseRepository courseRepository;
-    private final TopicGroupRepository topicGroupRepository;
-    private final CourseMapper courseMapper;
+    private final ReviewRepository reviewRepository;
+    private final EnrollmentRepository enrollmentRepository;
+    private final ISectionService sectionService;
 
     @Override
-    public List<CourseResponse> getAllCourses() {
-        return courseMapper.toDTOList(courseRepository.findAll());
-    }
-
-    @Override
-    public Page<CourseResponse> getAllCoursesPaged(Pageable pageable) {
-        return courseRepository.findAll(pageable)
-                .map(courseMapper::toDTO);
-    }
-
-    @Override
-    public List<CourseResponse> getAllPublishedCourses() {
-        return courseMapper.toDTOList(courseRepository.findByIsPublishedTrue());
-    }
-
-    @Override
-    public Page<CourseResponse> searchCourses(String keyword, Pageable pageable) {
-        return courseRepository.searchAllFields(keyword, pageable)
-                .map(courseMapper::toDTO);
-    }
-
-    @Override
-    public CourseResponse getCourseById(Long id) {
-        Course course = courseRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy khóa học"));
-        return courseMapper.toDTO(course);
-    }
-
-    @Override
-    public Course createCourse(CreateCourseRequest dto) {
+    public CourseDTO createCourse(CourseCreateRequest request) {
         Course course = Course.builder()
-                .name(dto.getName())
-                .level(dto.getLevel())
-                .description(dto.getDescription())
-                .imageUrl(dto.getImageUrl())
-                .price(dto.getPrice())
-                .isPublished(dto.getIsPublished())
+                .courseName(request.getCourseName())
+                .courseDescription(request.getCourseDescription())
+                .courseImageUrl(request.getCourseImageUrl())
+                .courseLevel(request.getCourseLevel())
+                .coursePrice(request.getCoursePrice())
+                .isFree(request.isFree())
+                .isPublished(request.isPublished())
+                .viewCount(0L)
+                .createdAt(LocalDateTime.now())
+                .lastModified(LocalDateTime.now())
                 .build();
-
-        if (dto.getTopicGroups() != null) {
-            List<TopicGroup> groups = dto.getTopicGroups().stream()
-                    .map(groupDTO -> TopicGroup.builder()
-                            .groupName(groupDTO.getGroupName())
-                            .description(groupDTO.getDescription())
-                            .course(course)
-                            .build())
-                    .collect(Collectors.toList());
-            course.setTopicGroups(groups);
-        }
-
-        return courseRepository.save(course);
+        
+        Course savedCourse = courseRepository.save(course);
+        return mapToDTO(savedCourse);
     }
 
     @Override
-    public Course updateCourse(Long id, CreateCourseRequest dto) {
-        Course course = courseRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy khóa học"));
-
-        course.setName(dto.getName());
-        course.setLevel(dto.getLevel());
-        course.setDescription(dto.getDescription());
-        course.setImageUrl(dto.getImageUrl());
-        course.setPrice(dto.getPrice());
-        course.setIsPublished(dto.getIsPublished());
-
-        return courseRepository.save(course);
+    public CourseDTO updateCourse(Long courseId, CourseUpdateRequest request) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy khóa học với ID: " + courseId));
+        
+        course.setCourseName(request.getCourseName());
+        course.setCourseDescription(request.getCourseDescription());
+        course.setCourseImageUrl(request.getCourseImageUrl());
+        course.setCourseLevel(request.getCourseLevel());
+        course.setCoursePrice(request.getCoursePrice());
+        course.setFree(request.isFree());
+        course.setPublished(request.isPublished());
+        course.setLastModified(LocalDateTime.now());
+        
+        Course updatedCourse = courseRepository.save(course);
+        return mapToDTO(updatedCourse);
     }
 
     @Override
-    public void deleteCourse(Long id) {
-        if (!courseRepository.existsById(id)) {
-            throw new RuntimeException("Không tìm thấy khóa học");
+    public CourseDTO getCourseById(Long courseId) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy khóa học với ID: " + courseId));
+        return mapToDTO(course);
+    }
+
+    @Override
+    public List<CourseDTO> getAllCourses(boolean publishedOnly) {
+        List<Course> courses;
+        if (publishedOnly) {
+            courses = courseRepository.findByIsPublishedTrue();
+        } else {
+            courses = courseRepository.findAll();
         }
-        courseRepository.deleteById(id);
+        return courses.stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public void deleteCourse(Long courseId) {
+        if (!courseRepository.existsById(courseId)) {
+            throw new ResourceNotFoundException("Không tìm thấy khóa học với ID: " + courseId);
+        }
+        courseRepository.deleteById(courseId);
+    }
+
+    @Override
+    public CourseDTO publishCourse(Long courseId, boolean isPublished) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy khóa học với ID: " + courseId));
+        
+        course.setPublished(isPublished);
+        course.setLastModified(LocalDateTime.now());
+        
+        Course updatedCourse = courseRepository.save(course);
+        return mapToDTO(updatedCourse);
+    }
+
+    @Override
+    public CourseDTO incrementViewCount(Long courseId) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy khóa học với ID: " + courseId));
+        
+        course.setViewCount(course.getViewCount() + 1);
+        Course updatedCourse = courseRepository.save(course);
+        return mapToDTO(updatedCourse);
+    }
+
+    @Override
+    public List<CourseDTO> searchCourses(String keyword) {
+        List<Course> courses = courseRepository.findByCourseNameContainingOrCourseDescriptionContaining(keyword, keyword);
+        return courses.stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public CourseDTO mapToDTO(Course course) {
+        // Tính toán số lượng đăng ký
+        int enrollmentCount = enrollmentRepository.countByCourseId(course.getId());
+        
+        // Tính toán đánh giá trung bình
+        Double avgRating = reviewRepository.findAverageRatingByCourseId(course.getId());
+        double averageRating = (avgRating != null) ? avgRating : 0.0;
+        
+        // Lấy danh sách sections
+        List<SectionDTO> sectionDTOs = course.getSections() != null ?
+                course.getSections().stream()
+                        .map(sectionService::mapToDTO)
+                        .collect(Collectors.toList()) : 
+                List.of();
+                
+        return CourseDTO.builder()
+                .id(course.getId())
+                .courseName(course.getCourseName())
+                .courseDescription(course.getCourseDescription())
+                .courseImageUrl(course.getCourseImageUrl())
+                .courseLevel(course.getCourseLevel())
+                .coursePrice(course.getCoursePrice())
+                .isFree(course.isFree())
+                .isPublished(course.isPublished())
+                .viewCount(course.getViewCount())
+                .createdAt(course.getCreatedAt())
+                .lastModified(course.getLastModified())
+                .sections(sectionDTOs)
+                .averageRating(averageRating)
+                .enrollmentCount(enrollmentCount)
+                .build();
+    }
+    
+    @Override
+    public List<CourseDTO> getAllCoursesWithPagination(Pageable pageable) {
+        Page<Course> coursePage = courseRepository.findAll(pageable);
+        return coursePage.getContent().stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
+    }
+    
+    @Override
+    public List<CourseDTO> searchCoursesWithPagination(String keyword, Pageable pageable) {
+        Page<Course> coursePage = courseRepository.findByCourseNameContainingOrCourseDescriptionContaining(
+                keyword, keyword, pageable);
+        return coursePage.getContent().stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
+    }
+    
+    @Override
+    public long countCourses() {
+        return courseRepository.count();
+    }
+    
+    @Override
+    public long countPublishedCourses() {
+        return courseRepository.countByIsPublishedTrue();
+    }
+    
+    @Override
+    public long countUnpublishedCourses() {
+        return courseRepository.countByIsPublishedFalse();
+    }
+    
+    @Override
+    public long countSearchResults(String keyword) {
+        return courseRepository.countByCourseNameContainingOrCourseDescriptionContaining(keyword, keyword);
     }
 }

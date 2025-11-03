@@ -1,15 +1,15 @@
 package korastudy.be.controller;
 
-import korastudy.be.dto.request.course.CreateCourseRequest;
-import korastudy.be.dto.response.course.CourseResponse;
+import jakarta.validation.Valid;
+import korastudy.be.dto.request.course.CourseCreateRequest;
+import korastudy.be.dto.request.course.CourseUpdateRequest;
+import korastudy.be.dto.response.course.CourseDTO;
 import korastudy.be.payload.response.ApiSuccess;
-import korastudy.be.service.impl.CourseService;
+import korastudy.be.service.ICourseService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,59 +19,62 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CourseController {
 
-    private final CourseService courseService;
+    private final ICourseService courseService;
 
-    // 1. Tìm kiếm + phân trang
-    @GetMapping("/search")
-    public ResponseEntity<Page<CourseResponse>> searchCourses(@RequestParam(defaultValue = "") String keyword, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "5") int size) {
-        Pageable pageable = PageRequest.of(page, size);
-        return ResponseEntity.ok(courseService.searchCourses(keyword, pageable));
+    @GetMapping
+    public ResponseEntity<List<CourseDTO>> getAllPublishedCourses() {
+        List<CourseDTO> courses = courseService.getAllCourses(true); // Chỉ lấy các khóa học đã được xuất bản
+        return ResponseEntity.ok(courses);
     }
 
-    // 2. Phân trang toàn bộ khóa học
-    @GetMapping("/page")
-    public ResponseEntity<Page<CourseResponse>> getAllCoursesPaged(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
-        Pageable pageable = PageRequest.of(page, size);
-        return ResponseEntity.ok(courseService.getAllCoursesPaged(pageable));
-    }
-
-    // 3. Lấy tất cả khóa học (full - không phân trang, chỉ admin dùng)
-    @GetMapping("/lists")
-    public ResponseEntity<List<CourseResponse>> getAllCourses() {
-        return ResponseEntity.ok(courseService.getAllCourses());
-    }
-
-    // 4. Tạo khóa học mới
-    @PostMapping("/create")
-    public ResponseEntity<ApiSuccess> createCourse(@RequestBody CreateCourseRequest dto) {
-        courseService.createCourse(dto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiSuccess.of("Khóa học đã được tạo thành công"));
-    }
-
-    // 5. Cập nhật khóa học
-    @PutMapping("/update/{id}")
-    public ResponseEntity<ApiSuccess> updateCourse(@PathVariable Long id, @RequestBody CreateCourseRequest dto) {
-        courseService.updateCourse(id, dto);
-        return ResponseEntity.ok(ApiSuccess.of("Khóa học đã được cập nhật"));
-    }
-
-    // 6. Lấy các khóa học đã publish
-    @GetMapping("/published")
-    public ResponseEntity<List<CourseResponse>> getPublishedCourses() {
-        return ResponseEntity.ok(courseService.getAllPublishedCourses());
-    }
-
-    // 7. Lấy chi tiết 1 khóa học
     @GetMapping("/{id}")
-    public ResponseEntity<CourseResponse> getCourse(@PathVariable Long id) {
-        return ResponseEntity.ok(courseService.getCourseById(id));
+    public ResponseEntity<CourseDTO> getCourseById(@PathVariable Long id) {
+        CourseDTO course = courseService.getCourseById(id);
+        
+        // Tăng số lượt xem
+        courseService.incrementViewCount(id);
+        
+        return ResponseEntity.ok(course);
     }
 
-    // 8. Xóa khóa học
-    @DeleteMapping("/delete/{id}")
+    @PostMapping
+    @PreAuthorize("hasAnyRole('CONTENT_MANAGER', 'ADMIN')")
+    public ResponseEntity<CourseDTO> createCourse(@Valid @RequestBody CourseCreateRequest request) {
+        CourseDTO courseDTO = courseService.createCourse(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(courseDTO);
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('CONTENT_MANAGER', 'ADMIN')")
+    public ResponseEntity<CourseDTO> updateCourse(@PathVariable Long id, @Valid @RequestBody CourseUpdateRequest request) {
+        CourseDTO courseDTO = courseService.updateCourse(id, request);
+        return ResponseEntity.ok(courseDTO);
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('CONTENT_MANAGER', 'ADMIN')")
     public ResponseEntity<ApiSuccess> deleteCourse(@PathVariable Long id) {
         courseService.deleteCourse(id);
-        return ResponseEntity.ok(ApiSuccess.of("Khóa học đã được xóa"));
+        return ResponseEntity.ok(ApiSuccess.of("Xóa khóa học thành công"));
+    }
+
+    @PutMapping("/{id}/publish")
+    @PreAuthorize("hasAnyRole('CONTENT_MANAGER', 'ADMIN')")
+    public ResponseEntity<CourseDTO> publishCourse(@PathVariable Long id, @RequestParam boolean isPublished) {
+        CourseDTO courseDTO = courseService.publishCourse(id, isPublished);
+        return ResponseEntity.ok(courseDTO);
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<List<CourseDTO>> searchCourses(@RequestParam String keyword) {
+        List<CourseDTO> courses = courseService.searchCourses(keyword);
+        return ResponseEntity.ok(courses);
+    }
+
+    @GetMapping("/admin")
+    @PreAuthorize("hasAnyRole('CONTENT_MANAGER', 'ADMIN')")
+    public ResponseEntity<List<CourseDTO>> getAllCoursesForAdmin() {
+        List<CourseDTO> courses = courseService.getAllCourses(false); // Lấy tất cả khóa học (cả published và chưa published)
+        return ResponseEntity.ok(courses);
     }
 }
-
