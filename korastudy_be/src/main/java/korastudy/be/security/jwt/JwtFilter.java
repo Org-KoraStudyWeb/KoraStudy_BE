@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import korastudy.be.security.userprinciple.AccountDetailsServiceImpl;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -15,28 +16,31 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
+@Slf4j
 @RequiredArgsConstructor
 @Component
 public class JwtFilter extends OncePerRequestFilter {
 
-
     private final JwtUtils jwtUtils;
-
     private final AccountDetailsServiceImpl userDetailsService;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain)
-            throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
 
         String jwt = parseJwt(request);
+
         if (jwt != null && jwtUtils.validateJwtToken(jwt)) {
             String username = jwtUtils.getUsernameFromJwtToken(jwt);
             UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-            UsernamePasswordAuthenticationToken auth =
-                    new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-            SecurityContextHolder.getContext().setAuthentication(auth);
+
+            if (SecurityContextHolder.getContext().getAuthentication() == null) {
+                UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                SecurityContextHolder.getContext().setAuthentication(auth);
+            }
+
+            log.debug("✅ JWT valid for user: {}", username);
+        } else {
+            log.debug("No valid JWT for request {}", request.getRequestURI());
         }
 
         filterChain.doFilter(request, response);
@@ -49,5 +53,10 @@ public class JwtFilter extends OncePerRequestFilter {
         }
         return null;
     }
-}
 
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getServletPath();
+        return path.startsWith("/api/v1/auth/") || path.startsWith("/api/v1/payments/vnpay-return") || path.startsWith("/api/v1/payments/callback") || path.startsWith("/swagger-ui") || path.startsWith("/v3/api-docs") || path.startsWith("/ws") || path.startsWith("/error");
+    }
+}
