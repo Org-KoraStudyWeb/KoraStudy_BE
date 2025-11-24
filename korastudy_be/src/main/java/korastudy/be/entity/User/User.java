@@ -1,6 +1,7 @@
 package korastudy.be.entity.User;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import korastudy.be.entity.BaseEntity.BaseTimeEntity;
@@ -81,6 +82,7 @@ public class User extends BaseTimeEntity {
     private List<PracticeTestResult> practiceTestResults;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
     private List<PaymentHistory> paymentHistories;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -99,7 +101,7 @@ public class User extends BaseTimeEntity {
     private List<VocabularyProgress> vocabularyProgresses;
 
     // Thêm getter cho username nếu chưa có
-    public String getUsername() {
+    public String getDisplayName() {
         // Nếu có field username thì return username
         // Nếu không có thì tạo từ firstName + lastName
         if (this.firstName != null && this.lastName != null) {
@@ -108,13 +110,21 @@ public class User extends BaseTimeEntity {
         return this.email; // fallback to email
     }
 
+    public String getFullName() {
+        if (this.lastName != null && this.firstName != null) {
+            return this.firstName + " " + this.lastName;
+        } else if (this.lastName != null) {
+            return this.lastName;
+        } else if (this.firstName != null) {
+            return this.firstName;
+        } else {
+            return this.email != null ? this.email : "Unknown";
+        }
+    }
+
     // Add toString for debugging
     @Override
     public String toString() {
-        return "User{" +
-                "id=" + id +
-                ", username='" + getUsername() + '\'' +
-                ", email='" + email + '\'' +
-                '}';
+        return "User{" + "id=" + id + ", username='" + getDisplayName() + '\'' + ", email='" + email + '\'' + '}';
     }
 }

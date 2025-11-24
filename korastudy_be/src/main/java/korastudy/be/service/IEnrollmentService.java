@@ -9,7 +9,7 @@ import java.util.List;
 
 public interface IEnrollmentService {
     
-    EnrollmentDTO enrollUserToCourse(EnrollmentRequest request);
+    EnrollmentDTO enrollUserToCourse(EnrollmentRequest request, String username);
     
     List<EnrollmentDTO> getUserEnrollments(Long userId);
     

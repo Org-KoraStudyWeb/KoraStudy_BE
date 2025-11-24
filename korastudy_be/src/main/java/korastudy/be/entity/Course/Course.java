@@ -1,6 +1,7 @@
 package korastudy.be.entity.Course;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Size;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -21,7 +22,6 @@ public class Course {
     @Column(columnDefinition = "NVARCHAR(255)")
     private String courseName;
 
-    @Column(columnDefinition = "TEXT")
     private String courseDescription;
 
     private String courseImageUrl;

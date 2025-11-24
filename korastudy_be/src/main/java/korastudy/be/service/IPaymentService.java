@@ -1,33 +1,25 @@
 package korastudy.be.service;
 
+import korastudy.be.dto.request.payment.PaymentRequest;
+import korastudy.be.dto.response.payment.PaymentResponse;
 import korastudy.be.entity.PaymentHistory;
 
 import java.util.List;
 
 public interface IPaymentService {
 
-    /**
-     * Tạo giao dịch thanh toán mới (trạng thái PENDING)
-     */
-    PaymentHistory createPayment(Long userId, Long courseId, Double amount);
+    // Tạo payment mới, trả về DTO
+    PaymentResponse createPayment(PaymentRequest request);
 
-    /**
-     * Cập nhật thanh toán thành công (sau khi xác thực)
-     */
-    PaymentHistory markAsPaid(Long paymentId);
+    // Cập nhật trạng thái thành SUCCESS
+    PaymentResponse markAsPaid(Long paymentId);
 
-    /**
-     * Hủy hoặc hoàn tiền (nếu cần)
-     */
-    PaymentHistory cancelPayment(Long paymentId);
+    // Hủy payment
+    PaymentResponse cancelPayment(Long paymentId);
 
-    /**
-     * Lấy lịch sử thanh toán của một người dùng
-     */
-    List<PaymentHistory> getPaymentHistoryByUser(Long userId);
+    // Lấy lịch sử payment của user theo userId
+    List<PaymentResponse> getPaymentHistoryByUser(Long userId);
 
-    /**
-     * Kiểm tra trạng thái giao dịch
-     */
+    // Lấy trạng thái payment
     String getPaymentStatus(Long paymentId);
 }
