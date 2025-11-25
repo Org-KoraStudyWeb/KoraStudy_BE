@@ -25,5 +25,14 @@ public interface IAccountService {
     // Dùng cho admin đặt lại mật khẩu cho ai đó
     void resetPasswordByAdmin(Long accountId, String newPassword);
 
+    // Quên mật khẩu
+    void forgotPassword(String email);
+
+    // Reset mật khẩu với token
+    void resetPassword(String token, String newPassword);
+
+    // Validate reset token
+    void validateResetToken(String token);
+
 
 }

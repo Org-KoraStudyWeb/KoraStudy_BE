@@ -36,6 +36,18 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiSuccess.of("Đăng ký tài khoản thành công"));
     }
 
+    @GetMapping("/verify-email")
+    public ResponseEntity<ApiSuccess> verifyEmail(@RequestParam String token) {
+        accountService.verifyEmail(token);
+        return ResponseEntity.ok(ApiSuccess.of("Email đã được xác thực thành công!"));
+    }
+
+    @PostMapping("/resend-verification")
+    public ResponseEntity<ApiSuccess> resendVerificationEmail(@RequestParam String email) {
+        accountService.resendVerificationEmail(email);
+        return ResponseEntity.ok(ApiSuccess.of("Đã gửi lại email xác thực"));
+    }
+
     // Chức năng login
     @PostMapping("/login")
     public ResponseEntity<JwtResponse> login(@Valid @RequestBody LoginRequest request) {
@@ -67,12 +79,35 @@ public class AuthController {
 
 
     //Admin đặt lại mật khẩu cho người dùng bất kỳ
-
     @PutMapping("/{accountId}/reset-password")
     public ResponseEntity<ApiSuccess> resetPassword(@PathVariable Long accountId, @RequestBody ResetPasswordRequest request) {
         accountService.resetPasswordByAdmin(accountId, request.getPassword());
         return ResponseEntity.ok(ApiSuccess.of("Đặt lại mật khẩu thành công"));
     }
+
+    // Quên mật khẩu - Gửi email reset
+    @PostMapping("/forgot-password")
+    public ResponseEntity<ApiSuccess> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        accountService.forgotPassword(request.getEmail());
+        return ResponseEntity.ok(ApiSuccess.of("Đã gửi link đặt lại mật khẩu đến email của bạn"));
+    }
+
+    // Reset mật khẩu với token
+    @PostMapping("/reset-password")
+    public ResponseEntity<ApiSuccess> resetPassword(@Valid @RequestBody PasswordResetRequest request) {
+
+        // 🔐 Xác thực token trước khi reset
+        accountService.resetPassword(request.getToken(), request.getNewPassword());
+        return ResponseEntity.ok(ApiSuccess.of("Đặt lại mật khẩu thành công"));
+    }
+
+    // Kiểm tra token reset có hợp lệ không
+    @GetMapping("/validate-reset-token")
+    public ResponseEntity<ApiSuccess> validateResetToken(@RequestParam String token) {
+        accountService.validateResetToken(token);
+        return ResponseEntity.ok(ApiSuccess.of("Token hợp lệ"));
+    }
+
 }
 
 

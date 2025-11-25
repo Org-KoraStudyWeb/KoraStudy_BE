@@ -54,7 +54,10 @@ public class WebSecurityConfig {
                                 "/ws/**", "/ws/info",
                                 "/api/v1/payments/vnpay-return",
                                 "/api/v1/payments/callback",
-                                "/api/v1/payments/notify"
+                                "/api/v1/payments/notify",
+                                "/api/v1/auth/verify-email",
+                                "/api/v1/auth/resend-verification",
+                                "api/v1/auth/forgot-password"
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/courses/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/payments/create").authenticated()
