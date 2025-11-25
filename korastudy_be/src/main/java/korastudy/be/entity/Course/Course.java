@@ -2,9 +2,11 @@ package korastudy.be.entity.Course;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Size;
+import korastudy.be.entity.PaymentHistory;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -54,4 +56,7 @@ public class Course {
     // Quan hệ: nhiều user đăng ký nhiều course (Enrollment)
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Enrollment> enrollments;
+
+    @OneToMany(mappedBy = "course", cascade = CascadeType.REMOVE)
+    private List<PaymentHistory> paymentHistories = new ArrayList<>();
 }
