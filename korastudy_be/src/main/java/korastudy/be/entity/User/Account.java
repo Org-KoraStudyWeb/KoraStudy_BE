@@ -3,6 +3,8 @@ package korastudy.be.entity.User;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.time.LocalDateTime;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
@@ -28,7 +30,16 @@ public class Account {
     @Column(nullable = false, unique = true)
     private String email;
 
-    private boolean isEnabled;
+    private boolean isEnabled = false;
+
+    @Column(name = "email_verification_token")
+    private String emailVerificationToken;
+
+    @Column(name = "password_reset_token")
+    private String passwordResetToken;
+
+    @Column(name = "token_expiry_time")
+    private LocalDateTime tokenExpiryTime;
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(

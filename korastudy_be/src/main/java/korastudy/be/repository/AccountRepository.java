@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -34,6 +35,7 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
 
     // Check unique constraints với exclusion
     boolean existsByEmailAndIdNot(String email, Long id);
+
     boolean existsByUsernameAndIdNot(String username, Long id);
 
     /*
@@ -70,7 +72,14 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
     // Đếm theo role
     long countByRoles_RoleName(RoleName roleName);
 
-    // Find account by username
+    // Tìm tài khoản theo username
     @Query("SELECT a FROM Account a WHERE a.username = :username")
     Optional<Account> findAccountByUsername(@Param("username") String username);
+
+    //Xác thực email
+    Optional<Account> findByEmailVerificationToken(String token);
+
+    // Methods quên mật khẩu
+    Optional<Account> findByPasswordResetToken(String token);
+
 }
