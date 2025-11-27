@@ -25,6 +25,7 @@ public class EnrollmentMapper {
                 enrollment.getId(),
                 enrollment.getUser().getId(),
                 enrollment.getUser().getDisplayName(),
+                enrollment.getUser().getAvatar(),
                 enrollment.getCourse().getId(),
                 enrollment.getCourse().getCourseName(),
                 enrollment.getEnrollDate(),

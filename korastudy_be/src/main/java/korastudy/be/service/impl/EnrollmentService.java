@@ -103,7 +103,7 @@ public class EnrollmentService implements IEnrollmentService {
 
     @Override
     public EnrollmentDTO mapToDTO(Enrollment enrollment) {
-        return EnrollmentDTO.builder().id(enrollment.getId()).userId(enrollment.getUser().getId()).username(enrollment.getUser().getDisplayName()).courseId(enrollment.getCourse().getId()).courseName(enrollment.getCourse().getCourseName()).enrollDate(enrollment.getEnrollDate()).expiryDate(enrollment.getExpiryDate()).progress(enrollment.getProgress()).build();
+        return EnrollmentMapper.toDTO(enrollment);
     }
 
     @Override

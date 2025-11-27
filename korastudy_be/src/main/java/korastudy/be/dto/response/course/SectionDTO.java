@@ -1,5 +1,6 @@
 package korastudy.be.dto.response.course;
 
+import korastudy.be.dto.response.quiz.QuizDTO;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -16,4 +17,5 @@ public class SectionDTO {
     private String sectionName;
     private Integer orderIndex;
     private List<LessonDTO> lessons;
+    private List<QuizDTO> quizzes;
 }

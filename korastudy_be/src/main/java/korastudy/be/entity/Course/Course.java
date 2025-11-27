@@ -1,7 +1,6 @@
 package korastudy.be.entity.Course;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Size;
 import korastudy.be.entity.PaymentHistory;
 import lombok.*;
 
@@ -21,33 +20,39 @@ public class Course {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(columnDefinition = "NVARCHAR(255)")
+    @Column(name = "course_name", columnDefinition = "NVARCHAR(255)")
     private String courseName;
 
+    @Column(name = "course_description", columnDefinition = "NVARCHAR(MAX)")
     private String courseDescription;
 
+    @Column(name = "course_image_url")
     private String courseImageUrl;
 
+    @Column(name = "is_published")
     private boolean isPublished;
 
+    @Column(name = "course_level", columnDefinition = "NVARCHAR(100)")
     private String courseLevel;
 
+    @Column(name = "course_price")
     private Double coursePrice;
 
+    @Column(name = "is_free")
     private boolean isFree;
 
+    @Column(name = "view_count")
     private Long viewCount = 0L;
 
+    @Column(name = "created_at")
     private LocalDateTime createdAt;
+
+    @Column(name = "last_modified")
     private LocalDateTime lastModified;
 
     // Quan hệ: 1 khóa học có nhiều Section
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Section> sections;
-
-    // Quan hệ: 1 khóa học có nhiều Quiz
-    @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Quiz> quizzes;
 
     // Quan hệ: 1 khóa học có nhiều Review
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)

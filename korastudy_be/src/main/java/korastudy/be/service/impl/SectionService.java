@@ -3,12 +3,14 @@ package korastudy.be.service.impl;
 import korastudy.be.dto.request.course.SectionCreateRequest;
 import korastudy.be.dto.response.course.LessonDTO;
 import korastudy.be.dto.response.course.SectionDTO;
+import korastudy.be.dto.response.quiz.QuizDTO;
 import korastudy.be.entity.Course.Course;
 import korastudy.be.entity.Course.Section;
 import korastudy.be.exception.ResourceNotFoundException;
 import korastudy.be.repository.CourseRepository;
 import korastudy.be.repository.SectionRepository;
 import korastudy.be.service.ILessonService;
+import korastudy.be.service.IQuizService;
 import korastudy.be.service.ISectionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -23,6 +25,7 @@ public class SectionService implements ISectionService {
     private final SectionRepository sectionRepository;
     private final CourseRepository courseRepository;
     private final ILessonService lessonService;
+    private final IQuizService quizService;
 
     @Override
     public SectionDTO createSection(SectionCreateRequest request) {
@@ -91,6 +94,25 @@ public class SectionService implements ISectionService {
                 .sectionName(section.getSectionName())
                 .orderIndex(section.getOrderIndex())
                 .lessons(lessonDTOs)
+                .build();
+    }
+
+    public SectionDTO getSectionWithContent(Long sectionId) {
+        Section section = sectionRepository.findById(sectionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Section not found"));
+
+        // Lấy lessons (videos, documents)
+        List<LessonDTO> lessons = lessonService.getLessonsBySectionId(sectionId);
+
+        // Lấy quizzes của section
+        List<QuizDTO> quizzes = quizService.getQuizzesBySectionId(sectionId);
+
+        return SectionDTO.builder()
+                .id(section.getId())
+                .sectionName(section.getSectionName())
+                .orderIndex(section.getOrderIndex())
+                .lessons(lessons)
+                .quizzes(quizzes)
                 .build();
     }
 }

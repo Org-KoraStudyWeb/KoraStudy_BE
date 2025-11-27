@@ -15,6 +15,7 @@ public class EnrollmentDTO {
     private Long id;
     private Long userId;
     private String username;
+    private String avatar;
     private Long courseId;
     private String courseName;
     private LocalDate enrollDate;
