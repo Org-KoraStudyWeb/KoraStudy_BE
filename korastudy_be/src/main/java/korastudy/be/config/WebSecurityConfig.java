@@ -36,46 +36,36 @@ public class WebSecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(request -> {
-                    var corsConfiguration = new org.springframework.web.cors.CorsConfiguration();
-                    corsConfiguration.setAllowedOrigins(List.of(
-                            "http://localhost:3000",
-                            "http://localhost:3030"));
-                    corsConfiguration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-                    corsConfiguration.setAllowedHeaders(List.of("*"));
-                    corsConfiguration.setAllowCredentials(true);
-                    return corsConfiguration;
+                    var config = new org.springframework.web.cors.CorsConfiguration();
+                    config.addAllowedOriginPattern("*"); // ✅ Cho phép mọi origin (đỡ lỗi FE)
+                    config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+                    config.setAllowedHeaders(List.of("*"));
+                    config.setAllowCredentials(true);
+                    return config;
                 }))
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(jwtEntryPoint))
                 .authorizeHttpRequests(auth -> auth
-                        // Các endpoint công khai
-                        .requestMatchers("/api/v1/auth/**").permitAll()
-                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/error").permitAll()
-                        .requestMatchers("/api/flashcards/system").permitAll()
-                        // Cho phép truy cập WebSocket
-                        .requestMatchers("/ws/**", "/ws/info").permitAll()
-                        // Phân quyền theo vai trò cụ thể
-                        .requestMatchers(HttpMethod.POST, "/api/v1/courses/**").hasAnyRole("ADMIN", "DELIVERY_MANAGER")
-                        .requestMatchers(HttpMethod.PUT, "/api/v1/courses/**").hasAnyRole("ADMIN", "DELIVERY_MANAGER")
-                        .requestMatchers(HttpMethod.DELETE, "/api/v1/courses/**").hasAnyRole("ADMIN", "DELIVERY_MANAGER")
-
-                        // Các API public (GET xem khóa học)
+                        .requestMatchers(
+                                "/api/v1/auth/**",
+                                "/swagger-ui/**", "/v3/api-docs/**", "/error",
+                                "/favicon.ico", "/.well-known/**",
+                                "/api/flashcards/system",
+                                "/ws/**", "/ws/info",
+                                "/api/v1/payments/vnpay-return",
+                                "/api/v1/payments/callback",
+                                "/api/v1/payments/notify",
+                                "/api/v1/auth/verify-email",
+                                "/api/v1/auth/resend-verification",
+                                "api/v1/auth/forgot-password"
+                        ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/courses/**").permitAll()
-
-                        // Các nhóm quyền khác
-                        .requestMatchers("/api/user/**").hasAnyRole("USER", "ADMIN")
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/api/content/**").hasRole("CONTENT_MANAGER")
-                        .requestMatchers("/api/delivery/**").hasRole("DELIVERY_MANAGER")
-                        .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
-
-                        // Các request còn lại bắt buộc phải xác thực
+                        .requestMatchers(HttpMethod.POST, "/api/v1/payments/create").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/payments/history").authenticated()
                         .anyRequest().authenticated()
-
                 )
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
-
 
         return http.build();
     }
@@ -97,6 +87,4 @@ public class WebSecurityConfig {
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
-
-    
 }

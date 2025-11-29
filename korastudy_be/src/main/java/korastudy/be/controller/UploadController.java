@@ -26,6 +26,16 @@ public class UploadController {
         }
     }
 
+    @PostMapping("/avatar")
+    public ResponseEntity<?> uploadAvatar(@RequestParam("file") MultipartFile file) {
+        try {
+            String url = cloudinaryService.uploadImage(file); // Chỉ truyền file, không truyền folder
+            return ResponseEntity.ok(Map.of("url", url));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Upload avatar failed", "message", e.getMessage()));
+        }
+    }
+
     // (tuỳ chọn) upload audio
     @PostMapping("/audio")
     public ResponseEntity<?> uploadAudio(@RequestParam("file") MultipartFile file) {

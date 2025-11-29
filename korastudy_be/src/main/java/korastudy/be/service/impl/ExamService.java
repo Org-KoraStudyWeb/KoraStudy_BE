@@ -85,6 +85,7 @@ public class ExamService {
                 qdto.setOption(q.getOption());
                 qdto.setImageUrl(q.getImageUrl());
                 qdto.setAudioUrl(q.getAudioUrl());
+                qdto.setExplanation(q.getExplanation());
                 questionDTOs.add(qdto);
             }
             partDTO.setQuestions(questionDTOs);

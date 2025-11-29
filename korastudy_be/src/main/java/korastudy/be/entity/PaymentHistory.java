@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 @Setter
 @Builder
 @Entity
-@Table(name = "paymen_history")
+@Table(name = "payment_history")
 public class PaymentHistory extends BaseTimeEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -28,6 +28,21 @@ public class PaymentHistory extends BaseTimeEntity {
 
     @Column(name = "transaction_status", nullable = false)
     private String transactionStatus;
+
+    @Column(name = "payment_method")
+    private String paymentMethod; // MOMO, ZaloPay, VNPAY...
+
+    @Column(name = "transaction_code")
+    private String transactionCode; // Mã giao dịch từ cổng thanh toán
+
+    @Column(name = "buyer_name", columnDefinition = "NVARCHAR(255)")
+    private String buyerName;
+
+    @Column(name = "buyer_email")
+    private String buyerEmail;
+
+    @Column(name = "buyer_phone")
+    private String buyerPhone;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)

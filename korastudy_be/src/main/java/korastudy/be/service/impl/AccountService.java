@@ -24,9 +24,12 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
@@ -40,6 +43,7 @@ public class AccountService implements IAccountService {
     private final RoleService roleService;
     private final UserService userService;
     private final NotificationService notificationService;
+    private final EmailService emailService;
 
 
     /**
@@ -47,13 +51,14 @@ public class AccountService implements IAccountService {
      */
 
     @Override
+    @Transactional
     public void register(RegisterRequest request) {
-        //Kiểm tra xác nhận mật khẩu
+        // Kiểm tra xác nhận mật khẩu
         if (!request.getPassword().equals(request.getConfirmPassword())) {
             throw new AccountException("Mật khẩu xác nhận không khớp");
         }
 
-        //Kiểm tra username/email đã tồn tại
+        // Kiểm tra username/email đã tồn tại
         if (accountRepository.existsByUsername(request.getUsername())) {
             throw new AlreadyExistsException("Username đã tồn tại");
         }
@@ -61,31 +66,34 @@ public class AccountService implements IAccountService {
         if (accountRepository.existsByEmail(request.getEmail())) {
             throw new AlreadyExistsException("Email đã được đăng ký từ trước");
         }
-        //Tìm role USER mặc định
-        Role defaultRole = roleRepository.findByRoleName(RoleName.USER)
-                .orElseThrow(() -> new AccountException("Không tìm thấy quyền USER trong hệ thống"));
 
-        //Tạo account mới
-        Account account = Account.builder()
-                .username(request.getUsername())
-                .email(request.getEmail())
-                .encryptedPassword(passwordEncoder.encode(request.getPassword()))
-                .roles(Set.of(defaultRole))
-                .isEnabled(true)
+        // Tìm role USER mặc định
+        Role defaultRole = roleRepository.findByRoleName(RoleName.USER).orElseThrow(() -> new AccountException("Không tìm thấy quyền USER trong hệ thống"));
+
+        // Tạo token xác thực email
+        String verificationToken = generateVerificationToken();
+
+        // Tạo account mới với isEnabled = false
+        Account account = Account.builder().username(request.getUsername()).email(request.getEmail()).encryptedPassword(passwordEncoder.encode(request.getPassword())).roles(Set.of(defaultRole)).isEnabled(false) // Chưa kích hoạt cho đến khi xác thực email
+                .emailVerificationToken(verificationToken).tokenExpiryTime(LocalDateTime.now().plusHours(24)) // Token hết hạn sau 24 giờ
                 .build();
-        // 5. Tạo user kèm theo userCode tự sinh
+
+        // Tạo user kèm theo userCode tự sinh
         String userCode = userService.generateCustomerUserCode();
 
-        User user = User.builder()
-                .userCode(userCode)
-                .email(account.getEmail())
-                .account(account)
-                .isEnable(true)
+        User user = User.builder().userCode(userCode).email(account.getEmail()).account(account).isEnable(false) // User cũng chưa được kích hoạt
                 .build();
 
         account.setUser(user);
 
         accountRepository.save(account);
+
+        // Gửi email xác thực
+        emailService.sendVerificationEmail(account.getEmail(), verificationToken);
+    }
+
+    private String generateVerificationToken() {
+        return UUID.randomUUID().toString();
     }
 
     //Admin thêm tài khoản cho các role quản lý
@@ -111,13 +119,7 @@ public class AccountService implements IAccountService {
         UserCodeValidate.validate(request.getUserCode(), roleName);
 
         // 5. Tạo account
-        Account account = Account.builder()
-                .username(request.getUsername())
-                .email(request.getJobEmail())
-                .encryptedPassword(passwordEncoder.encode(request.getPassword()))
-                .isEnabled(true)
-                .roles(Set.of(role))
-                .build();
+        Account account = Account.builder().username(request.getUsername()).email(request.getJobEmail()).encryptedPassword(passwordEncoder.encode(request.getPassword())).isEnabled(true).roles(Set.of(role)).build();
 
         // 6. Tạo user từ UserService
         User user = userService.createUserWithAccount(request.getUserCode(), account);
@@ -133,9 +135,7 @@ public class AccountService implements IAccountService {
     @Override
     public JwtResponse login(LoginRequest request) {
         // 1. Xác thực thông tin đăng nhập
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
-        );
+        Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
@@ -144,17 +144,14 @@ public class AccountService implements IAccountService {
 
         // 3. Lấy thông tin người dùng
         AccountDetailsImpl userDetails = (AccountDetailsImpl) authentication.getPrincipal();
-        List<RoleName> roles = userDetails.getAuthorities().stream()
-                .map(auth -> RoleName.valueOf(auth.getAuthority().replace("ROLE_", "")))
-                .collect(Collectors.toList());
+        List<RoleName> roles = userDetails.getAuthorities().stream().map(auth -> RoleName.valueOf(auth.getAuthority().replace("ROLE_", ""))).collect(Collectors.toList());
 
         return new JwtResponse(jwt, userDetails.getId(), userDetails.getUsername(), roles);
     }
 
     @Override
     public void enableAccount(Long accountId, boolean enable) {
-        Account account = accountRepository.findById(accountId)
-                .orElseThrow(() -> new AlreadyExistsException("Không tìm thấy tài khoản"));
+        Account account = accountRepository.findById(accountId).orElseThrow(() -> new AlreadyExistsException("Không tìm thấy tài khoản"));
         account.setEnabled(enable);
         accountRepository.save(account);
     }
@@ -162,8 +159,7 @@ public class AccountService implements IAccountService {
 
     @Override
     public void changePassword(String username, String oldPassword, String newPassword) {
-        Account account = accountRepository.findAccountByUsername(username)
-                .orElseThrow(() -> new AlreadyExistsException("Không tìm thấy tài khoản"));
+        Account account = accountRepository.findAccountByUsername(username).orElseThrow(() -> new AlreadyExistsException("Không tìm thấy tài khoản"));
 
         if (!passwordEncoder.matches(oldPassword, account.getEncryptedPassword())) {
             throw new AccountException("Mật khẩu cũ không chính xác");
@@ -176,10 +172,102 @@ public class AccountService implements IAccountService {
     @Override
     @PreAuthorize("hasRole('ADMIN')")
     public void resetPasswordByAdmin(Long accountId, String newPassword) {
-        Account account = accountRepository.findById(accountId)
-                .orElseThrow(() -> new AlreadyExistsException("Không tìm thấy tài khoản"));
+        Account account = accountRepository.findById(accountId).orElseThrow(() -> new AlreadyExistsException("Không tìm thấy tài khoản"));
 
         account.setEncryptedPassword(passwordEncoder.encode(newPassword));
         accountRepository.save(account);
     }
+
+    // QUÊN MẬT KHẨU
+    @Override
+    @Transactional
+    public void forgotPassword(String email) {
+        Account account = accountRepository.findByEmail(email).orElseThrow(() -> new AccountException("Email không tồn tại trong hệ thống"));
+
+        // Tạo token reset password
+        String resetToken = generateResetToken();
+        account.setPasswordResetToken(resetToken);
+        account.setTokenExpiryTime(LocalDateTime.now().plusHours(1)); // 1 giờ
+
+        accountRepository.save(account);
+
+        // Gửi email reset password
+        emailService.sendPasswordResetEmail(account.getEmail(), resetToken);
+    }
+
+    // RESET MẬT KHẨU
+    @Override
+    @Transactional
+    public void resetPassword(String token, String newPassword) {
+        Account account = accountRepository.findByPasswordResetToken(token).orElseThrow(() -> new AccountException("Token đặt lại mật khẩu không hợp lệ"));
+
+        if (account.getTokenExpiryTime().isBefore(LocalDateTime.now())) {
+            throw new AccountException("Token đã hết hạn");
+        }
+
+        // Cập nhật mật khẩu mới
+        account.setEncryptedPassword(passwordEncoder.encode(newPassword));
+        account.setPasswordResetToken(null);
+        account.setTokenExpiryTime(null);
+
+        accountRepository.save(account);
+    }
+
+    // VALIDATE RESET TOKEN
+    @Override
+    public void validateResetToken(String token) {
+        Account account = accountRepository.findByPasswordResetToken(token).orElseThrow(() -> new AccountException("Token không hợp lệ"));
+
+        if (account.getTokenExpiryTime().isBefore(LocalDateTime.now())) {
+            throw new AccountException("Token đã hết hạn");
+        }
+    }
+
+    private String generateResetToken() {
+        return UUID.randomUUID().toString();
+    }
+
+@Transactional
+public void verifyEmail(String token) {
+    Account account = accountRepository.findByEmailVerificationToken(token).orElseThrow(() -> new AccountException("Token xác thực không hợp lệ"));
+
+    if (account.getTokenExpiryTime().isBefore(LocalDateTime.now())) {
+        throw new AccountException("Token xác thực đã hết hạn");
+    }
+
+    if (account.isEnabled()) {
+        throw new AccountException("Tài khoản đã được xác thực trước đó");
+    }
+
+    // Kích hoạt tài khoản
+    account.setEnabled(true);
+    account.setEmailVerificationToken(null);
+    account.setTokenExpiryTime(null);
+
+    // Kích hoạt user
+    if (account.getUser() != null) {
+        account.getUser().setEnable(true);
+    }
+
+    accountRepository.save(account);
+}
+
+
+public void resendVerificationEmail(String email) {
+    Account account = accountRepository.findByEmail(email).orElseThrow(() -> new AccountException("Email không tồn tại"));
+
+    if (account.isEnabled()) {
+        throw new AccountException("Tài khoản đã được xác thực");
+    }
+
+    // Tạo token mới
+    String newToken = generateVerificationToken();
+    account.setEmailVerificationToken(newToken);
+    account.setTokenExpiryTime(LocalDateTime.now().plusHours(24));
+
+    accountRepository.save(account);
+
+    // Gửi lại email
+    emailService.sendVerificationEmail(account.getEmail(), newToken);
+}
 }

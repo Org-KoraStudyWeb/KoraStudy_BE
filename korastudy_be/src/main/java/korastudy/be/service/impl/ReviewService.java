@@ -110,7 +110,7 @@ public class ReviewService implements IReviewService {
         return ReviewDTO.builder()
                 .id(review.getId())
                 .userId(review.getUser().getId())
-                .username(review.getUser().getUsername())
+                .username(review.getUser().getDisplayName())
                 .userAvatar(review.getUser().getAvatar())
                 .courseId(review.getCourse().getId())
                 .rating(review.getRating())

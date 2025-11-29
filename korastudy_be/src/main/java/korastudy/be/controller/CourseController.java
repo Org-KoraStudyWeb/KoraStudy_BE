@@ -7,11 +7,14 @@ import korastudy.be.dto.response.course.CourseDTO;
 import korastudy.be.payload.response.ApiSuccess;
 import korastudy.be.service.ICourseService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -65,10 +68,23 @@ public class CourseController {
         return ResponseEntity.ok(courseDTO);
     }
 
+//    @GetMapping("/search")
+//    public ResponseEntity<List<CourseDTO>> searchCourses(@RequestParam String keyword) {
+//        List<CourseDTO> courses = courseService.searchCourses(keyword);
+//        return ResponseEntity.ok(courses);
+//    }
+
     @GetMapping("/search")
-    public ResponseEntity<List<CourseDTO>> searchCourses(@RequestParam String keyword) {
-        List<CourseDTO> courses = courseService.searchCourses(keyword);
-        return ResponseEntity.ok(courses);
+    public List<CourseDTO> searchCoursesAdvanced(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String courseLevel,
+            @RequestParam(required = false) Double minPrice,
+            @RequestParam(required = false) Double maxPrice,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
+            Pageable pageable
+    ) {
+        return courseService.searchCoursesAdvanced(keyword, courseLevel, minPrice, maxPrice, startDate, endDate, pageable);
     }
 
     @GetMapping("/admin")
