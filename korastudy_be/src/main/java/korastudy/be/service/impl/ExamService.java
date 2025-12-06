@@ -406,39 +406,16 @@ public class ExamService {
     }
 
     public List<ExamListItemResponse> searchExams(String title, String level, String type, int page, int size) {
-        List<MockTest> tests = mockTestRepo.findAll();
-        List<MockTest> filteredTests = tests;
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size);
+        
+        // Handle empty strings as null for the query
+        String searchTitle = (title != null && !title.trim().isEmpty()) ? title.trim() : null;
+        String searchLevel = (level != null && !level.trim().isEmpty()) ? level.trim() : null;
+        String searchType = (type != null && !type.trim().isEmpty()) ? type.trim() : null;
 
-        // Filter theo title
-        if (title != null && !title.trim().isEmpty()) {
-            filteredTests = filteredTests.stream()
-                    .filter(test -> test.getTitle().toLowerCase().contains(title.toLowerCase()))
-                    .toList();
-        }
-
-        // Filter theo level
-        if (level != null && !level.trim().isEmpty()) {
-            filteredTests = filteredTests.stream()
-                    .filter(test -> test.getLevel().equals(level))
-                    .toList();
-        }
-
-//        // Filter theo type (nếu có trường type trong MockTest)
-////        if (type != null && !type.trim().isEmpty()) {
-////            filteredTests = filteredTests.stream()
-////                    .filter(test -> test.getTestType() != null && test.getTestType().equals(type))
-////                    .toList();
-////        }
-
-        // Pagination
-        int start = page * size;
-        int end = Math.min(start + size, filteredTests.size());
-
-        if (start >= filteredTests.size()) {
-            return new ArrayList<>();
-        }
-
-        List<MockTest> paginatedTests = filteredTests.subList(start, end);
+        org.springframework.data.domain.Page<MockTest> pageResult = mockTestRepo.searchMockTests(searchTitle, searchLevel, searchType, pageable);
+        
+        List<MockTest> paginatedTests = pageResult.getContent();
 
         // Convert sang DTO
         List<ExamListItemResponse> dtos = new ArrayList<>();
