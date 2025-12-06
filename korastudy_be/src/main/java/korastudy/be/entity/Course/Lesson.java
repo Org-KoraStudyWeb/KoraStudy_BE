@@ -18,23 +18,32 @@ public class Lesson {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "lesson_title", columnDefinition = "NVARCHAR(500)")
     private String lessonTitle;
 
-    @Column(columnDefinition = "TEXT")
-    private String content; // nội dung chi tiết (Markdown/HTML)
+    @Column(name = "content", columnDefinition = "NVARCHAR(MAX)")
+    private String content;
 
+    @Column(name = "video_url")
     private String videoUrl;
 
-    @Enumerated(EnumType.STRING)
-    private LessonType contentType; // VIDEO, TEXT
+    @Column(name = "document_url")
+    private String documentUrl; //THÊM: cho tài liệu PDF/Word
 
-    private Integer orderIndex; // Thứ tự bài trong chương
+    @Enumerated(EnumType.STRING)
+    @Column(name = "content_type")
+    private LessonType contentType; //SỬA: VIDEO, TEXT, QUIZ, DOCUMENT
+
+    @Column(name = "order_index")
+    private Integer orderIndex;
+
+    @Column(name = "duration")
+    private Integer duration; // THÊM: thời lượng (phút)
 
     @ManyToOne
     @JoinColumn(name = "section_id")
     private Section section;
 
-    // Tiến độ học viên
     @OneToMany(mappedBy = "lesson", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<LessonProgress> progresses;
 }

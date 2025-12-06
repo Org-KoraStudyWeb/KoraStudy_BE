@@ -60,7 +60,7 @@ public class AdminBlogService implements IAdminBlogService {
                 predicates.add(root.join("categories").get("id").in(categoryIds));
             }
 
-            // Filter by publish status
+            // Filter by publishment status
             if (published != null) {
                 predicates.add(criteriaBuilder.equal(root.get("published"), published));
             }

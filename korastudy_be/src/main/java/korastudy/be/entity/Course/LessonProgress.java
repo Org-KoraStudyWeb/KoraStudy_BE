@@ -23,7 +23,10 @@ public class LessonProgress {
     private ProgressStatus status; // NOT_STARTED, IN_PROGRESS, COMPLETED
 
     private Long timeSpent; // thời gian học (giây/phút)
+    private LocalDateTime startedDate;
     private LocalDateTime completedDate;
+
+    private LocalDateTime lastAccessed;
 
     @ManyToOne
     @JoinColumn(name = "lesson_id")

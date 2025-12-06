@@ -48,12 +48,10 @@ public class EmailService implements IEmailService {
                                 <p style="text-align: center;">
                                     <a href="%s" class="button">Xác thực Email</a>
                                 </p>
-                                <p>Nếu nút không hoạt động, bạn có thể sao chép và dán đường link sau vào trình duyệt:</p>
-                                <p>%s</p>
                                 <p>Link này sẽ hết hạn sau 24 giờ.</p>
                             </div>
                             <div class="footer">
-                                <p>Trân trọng,<br>Đội ngũ hỗ trợ</p>
+                                <p>Trân trọng,<br>Đội ngũ hỗ trợ KoraStudy</p>S
                             </div>
                         </div>
                     </body>

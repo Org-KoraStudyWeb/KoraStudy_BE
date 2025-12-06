@@ -1,8 +1,10 @@
 package korastudy.be.entity.Course;
+
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+
 import korastudy.be.entity.User.User;
 
 @Entity
@@ -17,11 +19,13 @@ public class Review {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "rating")
     private int rating; // 1-5 sao
 
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "comment", columnDefinition = "NVARCHAR(MAX)")
     private String comment;
 
+    @Column(name = "created_at")
     private LocalDateTime createdAt;
 
     @ManyToOne
@@ -32,4 +36,3 @@ public class Review {
     @JoinColumn(name = "user_id")
     private User user;
 }
-

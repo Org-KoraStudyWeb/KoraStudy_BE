@@ -77,7 +77,9 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
     Optional<Account> findAccountByUsername(@Param("username") String username);
 
     //Xác thực email
-    Optional<Account> findByEmailVerificationToken(String token);
+
+    @Query("SELECT a FROM Account a WHERE a.emailVerificationToken = :token")
+    Optional<Account> findByEmailVerificationToken(@Param("token") String token);
 
     // Methods quên mật khẩu
     Optional<Account> findByPasswordResetToken(String token);

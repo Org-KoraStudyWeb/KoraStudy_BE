@@ -3,6 +3,7 @@ package korastudy.be.controller;
 import jakarta.validation.Valid;
 import korastudy.be.dto.request.auth.*;
 import korastudy.be.dto.response.auth.JwtResponse;
+import korastudy.be.exception.AccountException;
 import korastudy.be.payload.response.ApiSuccess;
 import korastudy.be.service.impl.AccountService;
 import korastudy.be.service.impl.NotificationService;
@@ -38,8 +39,14 @@ public class AuthController {
 
     @GetMapping("/verify-email")
     public ResponseEntity<ApiSuccess> verifyEmail(@RequestParam String token) {
-        accountService.verifyEmail(token);
-        return ResponseEntity.ok(ApiSuccess.of("Email đã được xác thực thành công!"));
+        try {
+            accountService.verifyEmail(token);
+            return ResponseEntity.ok(ApiSuccess.of("Email đã được xác thực thành công!"));
+
+        } catch (AccountException e) {
+            // Chỉ throw exception cho các lỗi thực sự (token hết hạn)
+            throw e;
+        }
     }
 
     @PostMapping("/resend-verification")
