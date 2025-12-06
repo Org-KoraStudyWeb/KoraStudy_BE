@@ -9,4 +9,5 @@ public class ExamQuestionResponse {
     private String option;
     private String imageUrl;
     private String audioUrl;
+    private String Explanation;
 }
