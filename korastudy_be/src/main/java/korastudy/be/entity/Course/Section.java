@@ -17,8 +17,10 @@ public class Section {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "section_name", columnDefinition = "NVARCHAR(500)")
     private String sectionName;
 
+    @Column(name = "order_index")
     private Integer orderIndex; // Thứ tự chương
 
     @ManyToOne
@@ -27,4 +29,7 @@ public class Section {
 
     @OneToMany(mappedBy = "section", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Lesson> lessons;
+
+    @OneToMany(mappedBy = "section", cascade = CascadeType.ALL)
+    private List<Quiz> quizzes;
 }

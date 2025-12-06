@@ -13,16 +13,20 @@ import lombok.NoArgsConstructor;
 public class LessonUpdateRequest {
     @NotBlank(message = "Tiêu đề bài học không được để trống")
     private String lessonTitle;
-    
+
+    private String content;
+
+    private String videoUrl;
+    private String documentUrl;
+
     @NotNull(message = "Loại nội dung không được để trống")
     private LessonType contentType;
-    
-    private String videoUrl;
-    
-    @NotBlank(message = "Nội dung bài học không được để trống")
-    private String content;
-    
+
+    @NotNull(message = "Thứ tự không được để trống")
     private Integer orderIndex;
-    
-    private Integer duration; // Thời lượng bài học tính bằng phút
+
+    private Integer duration;
+
+    @NotNull(message = "ID chương học không được để trống")
+    private Long sectionId;
 }

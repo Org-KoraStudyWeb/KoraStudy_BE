@@ -41,11 +41,5 @@ public class Topic extends BaseTimeEntity {
     @OneToMany(mappedBy = "topic", cascade = CascadeType.ALL)
     private List<Grammar> grammars;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "topic_group_id", nullable = false)
-    private TopicGroup topicGroup;
-
-    @OneToOne(mappedBy = "topic", cascade = CascadeType.ALL)
-    private TopicTest topicTest;
 
 }

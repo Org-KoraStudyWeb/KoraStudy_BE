@@ -4,14 +4,17 @@ import jakarta.validation.Valid;
 import korastudy.be.dto.request.course.CourseCreateRequest;
 import korastudy.be.dto.request.course.CourseUpdateRequest;
 import korastudy.be.dto.response.course.CourseDTO;
-import korastudy.be.dto.response.course.EnrollmentDTO;
+import korastudy.be.dto.response.enrollment.EnrollmentDTO;
 import korastudy.be.dto.response.course.ReviewDTO;
+import korastudy.be.dto.response.enrollment.EnrollmentDetailDTO;
+import korastudy.be.dto.response.enrollment.EnrollmentStatsDTO;
 import korastudy.be.payload.response.ApiSuccess;
 import korastudy.be.payload.response.PagedResponse;
 import korastudy.be.service.ICourseService;
 import korastudy.be.service.IEnrollmentService;
 import korastudy.be.service.IReviewService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -92,19 +95,32 @@ public class AdminCourseController {
         stats.put("totalCourses", courseService.countCourses());
         stats.put("publishedCourses", courseService.countPublishedCourses());
         stats.put("unpublishedCourses", courseService.countUnpublishedCourses());
-        stats.put("totalEnrollments", enrollmentService.countTotalEnrollments());
+
+        EnrollmentStatsDTO enrollmentStats = enrollmentService.getEnrollmentStats();
+        stats.put("totalEnrollments", enrollmentStats.getTotalEnrollments());
+        stats.put("activeEnrollments", enrollmentStats.getActiveEnrollments());
+        stats.put("completedEnrollments", enrollmentStats.getCompletedEnrollments());
 
         return ResponseEntity.ok(stats);
     }
 
     @GetMapping("/{id}/enrollments")
-    public ResponseEntity<PagedResponse<EnrollmentDTO>> getCourseEnrollments(@PathVariable Long id, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
+    public ResponseEntity<PagedResponse<EnrollmentDetailDTO>> getCourseEnrollments(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
         Pageable pageable = PageRequest.of(page, size);
 
-        List<EnrollmentDTO> enrollments = enrollmentService.getCourseEnrollmentsWithPagination(id, pageable);
-        long totalElements = enrollmentService.countEnrollmentsByCourseId(id);
+        Page<EnrollmentDetailDTO> enrollmentPage = enrollmentService.getCourseEnrollments(id, pageable);
 
-        return ResponseEntity.ok(new PagedResponse<>(enrollments, page, size, totalElements, (int) Math.ceil((double) totalElements / size)));
+        return ResponseEntity.ok(new PagedResponse<>(
+                enrollmentPage.getContent(),
+                page,
+                size,
+                enrollmentPage.getTotalElements(),
+                enrollmentPage.getTotalPages()
+        ));
     }
 
     @GetMapping("/{id}/reviews")

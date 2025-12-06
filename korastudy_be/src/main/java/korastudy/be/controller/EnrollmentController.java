@@ -1,16 +1,18 @@
 package korastudy.be.controller;
 
 import jakarta.validation.Valid;
-import korastudy.be.dto.request.course.EnrollmentRequest;
-import korastudy.be.dto.response.course.EnrollmentDTO;
+import korastudy.be.dto.request.enrollment.EnrollmentRequest;
+import korastudy.be.dto.response.enrollment.EnrollmentDTO;
+import korastudy.be.entity.Enum.EnrollmentStatus;
 import korastudy.be.entity.User.User;
 import korastudy.be.exception.ResourceNotFoundException;
 import korastudy.be.payload.response.ApiSuccess;
 import korastudy.be.repository.UserRepository;
-import korastudy.be.service.ICourseService;
 import korastudy.be.service.IEnrollmentService;
-import korastudy.be.service.IUserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -25,7 +27,6 @@ import java.util.List;
 public class EnrollmentController {
 
     private final IEnrollmentService enrollmentService;
-    private final IUserService userService;
     private final UserRepository userRepository;
 
     /*
@@ -33,8 +34,7 @@ public class EnrollmentController {
      */
     @PostMapping
     @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'CONTENT_MANAGER')")
-    public ResponseEntity<EnrollmentDTO> enrollCourse(@Valid @RequestBody EnrollmentRequest request, Principal principal // ✅ ĐÃ THÊM Principal
-    ) {
+    public ResponseEntity<EnrollmentDTO> enrollCourse(@Valid @RequestBody EnrollmentRequest request, Principal principal) {
         String username = principal.getName();
         EnrollmentDTO enrollmentDTO = enrollmentService.enrollUserToCourse(request, username);
         return ResponseEntity.status(HttpStatus.CREATED).body(enrollmentDTO);
@@ -46,28 +46,34 @@ public class EnrollmentController {
         return ResponseEntity.ok(enrollment);
     }
 
+    // Cho admin xem enrollments của user (có thể thêm phân trang sau)
     @GetMapping("/user/{userId}")
+    @PreAuthorize("hasAnyRole('CONTENT_MANAGER', 'ADMIN')")
     public ResponseEntity<List<EnrollmentDTO>> getUserEnrollments(@PathVariable Long userId) {
         List<EnrollmentDTO> enrollments = enrollmentService.getUserEnrollments(userId);
         return ResponseEntity.ok(enrollments);
     }
 
-    @GetMapping("/course/{courseId}")
-    @PreAuthorize("hasAnyRole('CONTENT_MANAGER', 'ADMIN')")
-    public ResponseEntity<List<EnrollmentDTO>> getCourseEnrollments(@PathVariable Long courseId) {
-        List<EnrollmentDTO> enrollments = enrollmentService.getCourseEnrollments(courseId);
-        return ResponseEntity.ok(enrollments);
-    }
 
     @GetMapping("/my-courses")
     @PreAuthorize("hasAnyRole('USER', 'DELIVERY_MANAGER', 'CONTENT_MANAGER', 'ADMIN')")
     public ResponseEntity<List<EnrollmentDTO>> getMyEnrollments(Principal principal) {
         String username = principal.getName();
-
-        // ✅ Dùng trực tiếp repository
         User user = userRepository.findByUsername(username).orElseThrow(() -> new ResourceNotFoundException("User not found: " + username));
 
         List<EnrollmentDTO> enrollments = enrollmentService.getUserEnrollments(user.getId());
+        return ResponseEntity.ok(enrollments);
+    }
+
+    // Lọc khóa học của tôi theo trạng thái
+    @GetMapping("/my-courses/filter")
+    @PreAuthorize("hasAnyRole('USER', 'DELIVERY_MANAGER', 'CONTENT_MANAGER', 'ADMIN')")
+    public ResponseEntity<List<EnrollmentDTO>> getMyEnrollmentsByStatus(Principal principal, @RequestParam EnrollmentStatus status) {
+
+        String username = principal.getName();
+        User user = userRepository.findByUsername(username).orElseThrow(() -> new ResourceNotFoundException("User not found: " + username));
+
+        List<EnrollmentDTO> enrollments = enrollmentService.getUserEnrollmentsByStatus(user.getId(), status);
         return ResponseEntity.ok(enrollments);
     }
 
@@ -96,11 +102,16 @@ public class EnrollmentController {
     @PreAuthorize("hasAnyRole('USER', 'DELIVERY_MANAGER', 'CONTENT_MANAGER', 'ADMIN')")
     public ResponseEntity<Boolean> checkMyEnrollment(@RequestParam Long courseId, Principal principal) {
         String username = principal.getName();
-
-        // ✅ Dùng trực tiếp repository thay vì userService
         User user = userRepository.findByUsername(username).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy user: " + username));
 
         boolean isEnrolled = enrollmentService.isUserEnrolledInCourse(user.getId(), courseId);
         return ResponseEntity.ok(isEnrolled);
+    }
+
+    // API cho dashboard stats
+    @GetMapping("/stats")
+    @PreAuthorize("hasAnyRole('CONTENT_MANAGER', 'ADMIN')")
+    public ResponseEntity<?> getEnrollmentStats() {
+        return ResponseEntity.ok(enrollmentService.getEnrollmentStats());
     }
 }

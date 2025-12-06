@@ -15,7 +15,6 @@ import korastudy.be.entity.Notification;
 import korastudy.be.entity.PaymentHistory;
 import korastudy.be.entity.Post.PostComment;
 import korastudy.be.entity.Vocabulary.VocabularyProgress;
-import korastudy.be.entity.Topic.TopicTestResult;
 import lombok.*;
 
 import java.time.LocalDate;
@@ -87,9 +86,6 @@ public class User extends BaseTimeEntity {
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Notification> notifications;
-
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<TopicTestResult> topicTestResults;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Certificate> certificates;
