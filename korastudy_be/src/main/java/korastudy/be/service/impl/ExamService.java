@@ -24,6 +24,7 @@ public class ExamService {
     private final UserRepository userRepo;
     private final PracticeTestResultRepository practiceResultRepo;
     private final ExamCommentRepository commentRepo;
+    private final UserStudyActivityService studyActivityService;
 
     public List<ExamListItemResponse> getAllExams() {
         List<MockTest> tests = mockTestRepo.findAll();
@@ -293,6 +294,11 @@ public class ExamService {
             result = resultRepo.save(result);
             System.out.println("✅ Result saved with ID: " + result.getId());
             
+            // Ghi nhận hoạt động học tập (giả sử mỗi bài thi mất khoảng duration phút)
+            int studyDuration = mockTest.getDurationTimes() != null ? mockTest.getDurationTimes() : 60;
+            studyActivityService.recordStudyActivity(userId, studyDuration);
+            System.out.println("📝 Recorded study activity: " + studyDuration + " minutes");
+            
         } catch (Exception e) {
             System.err.println("❌ Error saving result: " + e.getMessage());
             e.printStackTrace();
@@ -498,6 +504,11 @@ public class ExamService {
         statistics.put("totalCorrect", totalCorrect);
         statistics.put("totalIncorrect", totalIncorrect);
         statistics.put("accuracyRate", Math.round(accuracyRate * 100.0) / 100.0);
+
+        // Thêm study streak và total study hours
+        Map<String, Object> studyStats = studyActivityService.getUserStudyStats(userId);
+        statistics.put("studyStreak", studyStats.get("studyStreak"));
+        statistics.put("totalStudyHours", studyStats.get("totalStudyHours"));
 
         return statistics;
     }
