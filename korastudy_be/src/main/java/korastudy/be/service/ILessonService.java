@@ -37,7 +37,14 @@ public interface ILessonService {
 
     LessonProgressDTO getLessonProgress(Long lessonId, String username);
 
+    // Cho user thường - lấy progress của chính họ
     List<LessonProgressDTO> getUserProgressByCourse(Long courseId, String username);
+
+    // Cho admin - lấy progress của user cụ thể
+    List<LessonProgressDTO> getUserProgressByCourseForAdmin(Long courseId, Long userId);
+
+    // Cho admin - lấy progress của tất cả users trong khóa học
+    List<LessonProgressDTO> getAllUsersProgressByCourse(Long courseId);
 
     // Utils
     LessonDTO mapToDTO(Lesson lesson);

@@ -10,14 +10,17 @@ import korastudy.be.repository.*;
 import korastudy.be.service.ILessonService;
 import korastudy.be.service.IUploadService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class LessonService implements ILessonService {
@@ -25,6 +28,7 @@ public class LessonService implements ILessonService {
     private final LessonRepository lessonRepository;
     private final SectionRepository sectionRepository;
     private final LessonProgressRepository progressRepository;
+    private final CourseRepository courseRepository;
     private final UserRepository userRepository;
     private final IUploadService uploadService;
 
@@ -35,10 +39,10 @@ public class LessonService implements ILessonService {
     public LessonDTO createLesson(LessonCreateRequest request) {
         Section section = sectionRepository.findById(request.getSectionId()).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy chương học với ID: " + request.getSectionId()));
 
-        Lesson lesson = Lesson.builder().lessonTitle(request.getLessonTitle()).content(request.getContent()).videoUrl(request.getVideoUrl()).documentUrl(request.getDocumentUrl()).contentType(request.getContentType()).orderIndex(request.getOrderIndex()).duration(request.getDuration()) //  Số giây
-                .section(section).build();
+        Lesson lesson = Lesson.builder().lessonTitle(request.getLessonTitle()).content(request.getContent()).videoUrl(request.getVideoUrl()).documentUrl(request.getDocumentUrl()).contentType(request.getContentType()).orderIndex(request.getOrderIndex()).duration(request.getDuration()).section(section).build();
 
         Lesson savedLesson = lessonRepository.save(lesson);
+        log.info("Created lesson: ID={}, Title={}", savedLesson.getId(), savedLesson.getLessonTitle());
         return mapToDTO(savedLesson);
     }
 
@@ -55,33 +59,28 @@ public class LessonService implements ILessonService {
         lesson.setDocumentUrl(request.getDocumentUrl());
         lesson.setContentType(request.getContentType());
         lesson.setOrderIndex(request.getOrderIndex());
-        lesson.setDuration(request.getDuration()); //  Số giây
+        lesson.setDuration(request.getDuration());
         lesson.setSection(section);
 
         Lesson updatedLesson = lessonRepository.save(lesson);
+        log.info("Updated lesson: ID={}, Title={}", updatedLesson.getId(), updatedLesson.getLessonTitle());
         return mapToDTO(updatedLesson);
     }
 
-    // ==================== FILE UPLOAD với TÍNH THỜI GIAN ====================
+    // ==================== FILE UPLOAD ====================
 
     @Override
     @Transactional
     public String uploadVideo(MultipartFile file, String title) {
         try {
-            // 1. Upload video lên Cloudinary
             String videoUrl = uploadService.uploadVideo(file, title);
-
-            // 2.  THÊM: Tính thời lượng video (giây)
             Integer duration = calculateVideoDuration(file);
 
-            // 3. Log thông tin
-            System.out.println("🎥 Video uploaded: " + videoUrl);
-            System.out.println("⏱️ Video duration: " + duration + " seconds");
-            System.out.println("📊 Formatted: " + formatDuration(duration));
-
+            log.info("Video uploaded: URL={}, Duration={} seconds, Title={}", videoUrl, duration, title);
             return videoUrl;
 
         } catch (Exception e) {
+            log.error("Error uploading video: {}", e.getMessage());
             throw new RuntimeException("Lỗi khi upload video: " + e.getMessage(), e);
         }
     }
@@ -90,14 +89,12 @@ public class LessonService implements ILessonService {
     @Transactional
     public String uploadDocument(MultipartFile file, String title) {
         try {
-            // Upload document lên Cloudinary
             String documentUrl = uploadService.uploadDocument(file, title);
-
-            System.out.println("📄 Document uploaded: " + documentUrl);
-
+            log.info("Document uploaded: URL={}, Title={}", documentUrl, title);
             return documentUrl;
 
         } catch (Exception e) {
+            log.error("Error uploading document: {}", e.getMessage());
             throw new RuntimeException("Lỗi khi upload document: " + e.getMessage(), e);
         }
     }
@@ -107,94 +104,57 @@ public class LessonService implements ILessonService {
     public void deleteFile(String fileUrl) {
         try {
             uploadService.deleteFile(fileUrl);
-            System.out.println(" File deleted: " + fileUrl);
+            log.info("File deleted: URL={}", fileUrl);
         } catch (Exception e) {
+            log.error("Error deleting file: {}", e.getMessage());
             throw new RuntimeException("Lỗi khi xóa file: " + e.getMessage(), e);
         }
     }
 
-    // ==================== TÍNH THỜI LƯỢNG VIDEO ====================
+    // ==================== VIDEO DURATION CALCULATION ====================
 
-    /**
-     *  THÊM: Tính thời lượng video từ file
-     * Trong thực tế, cần dùng thư viện như JAVE, FFmpeg, etc.
-     * Tạm thời ước tính dựa trên file size và type
-     */
     private Integer calculateVideoDuration(MultipartFile file) {
         try {
             long fileSize = file.getSize();
             String contentType = file.getContentType();
 
-            //  ƯỚC TÍNH THỜI LƯỢNG DỰA TRÊN FILE SIZE VÀ TYPE
             if (contentType != null) {
-                // Tỷ lệ bitrate ước tính (bits per second)
                 double estimatedBitrate = getEstimatedBitrate(contentType, fileSize);
-
                 if (estimatedBitrate > 0) {
-                    // Thời lượng = (file size * 8) / bitrate
                     double durationInSeconds = (fileSize * 8.0) / estimatedBitrate;
                     return (int) Math.round(durationInSeconds);
                 }
             }
 
-            // Fallback: Ước tính dựa trên file size
             return estimateDurationFromSize(fileSize);
 
         } catch (Exception e) {
-            System.out.println(" Cannot calculate video duration, using default: " + e.getMessage());
+            log.warn("Cannot calculate video duration, using default: {}", e.getMessage());
             return 300; // Default 5 minutes
         }
     }
 
-    /**
-     *  Ước tính bitrate dựa trên loại video
-     */
     private double getEstimatedBitrate(String contentType, long fileSize) {
-        // Bitrate ước tính cho các loại video (bits per second)
         return switch (contentType) {
-            case "video/mp4" ->
-                    fileSize > 100 * 1024 * 1024 ? 2000000 : 1000000; // 2 Mbps cho file lớn, 1 Mbps cho file nhỏ
-            case "video/avi" -> 1500000; // 1.5 Mbps
-            case "video/mov" -> 1800000; // 1.8 Mbps
-            case "video/mkv" -> 2200000; // 2.2 Mbps
-            default -> 1000000; // 1 Mbps mặc định
+            case "video/mp4" -> fileSize > 100 * 1024 * 1024 ? 2000000 : 1000000;
+            case "video/avi" -> 1500000;
+            case "video/mov" -> 1800000;
+            case "video/mkv" -> 2200000;
+            default -> 1000000;
         };
     }
 
-    /**
-     *  Ước tính thời lượng dựa trên kích thước file (fallback)
-     */
     private Integer estimateDurationFromSize(long fileSize) {
-        // Ước tính thô: 1MB ≈ 10-15 giây video
         double sizeInMB = fileSize / (1024.0 * 1024.0);
 
-        if (sizeInMB < 5) return 30;      // <5MB: 30 giây
-        else if (sizeInMB < 20) return 120; // 5-20MB: 2 phút
-        else if (sizeInMB < 50) return 300; // 20-50MB: 5 phút
-        else if (sizeInMB < 100) return 600; // 50-100MB: 10 phút
-        else return 1200; // >100MB: 20 phút
+        if (sizeInMB < 5) return 30;
+        else if (sizeInMB < 20) return 120;
+        else if (sizeInMB < 50) return 300;
+        else if (sizeInMB < 100) return 600;
+        else return 1200;
     }
 
-    /**
-     *  Format duration từ giây sang string đẹp
-     */
-    private String formatDuration(Integer durationInSeconds) {
-        if (durationInSeconds == null || durationInSeconds == 0) {
-            return "0:00";
-        }
-
-        int hours = durationInSeconds / 3600;
-        int minutes = (durationInSeconds % 3600) / 60;
-        int seconds = durationInSeconds % 60;
-
-        if (hours > 0) {
-            return String.format("%d:%02d:%02d", hours, minutes, seconds);
-        } else {
-            return String.format("%d:%02d", minutes, seconds);
-        }
-    }
-
-    // ==================== CÁC METHOD KHÁC GIỮ NGUYÊN ====================
+    // ==================== BASIC CRUD OPERATIONS ====================
 
     @Override
     @Transactional(readOnly = true)
@@ -208,7 +168,6 @@ public class LessonService implements ILessonService {
     public void deleteLesson(Long id) {
         Lesson lesson = lessonRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy bài học với ID: " + id));
 
-        // Xóa file nếu có
         if (lesson.getVideoUrl() != null) {
             deleteFile(lesson.getVideoUrl());
         }
@@ -217,12 +176,14 @@ public class LessonService implements ILessonService {
         }
 
         lessonRepository.delete(lesson);
+        log.info("Deleted lesson: ID={}, Title={}", lesson.getId(), lesson.getLessonTitle());
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<LessonDTO> getLessonsBySectionId(Long sectionId) {
         List<Lesson> lessons = lessonRepository.findBySectionIdOrderByOrderIndex(sectionId);
+        log.info("Found {} lessons for section ID={}", lessons.size(), sectionId);
         return lessons.stream().map(this::mapToDTO).collect(Collectors.toList());
     }
 
@@ -230,6 +191,7 @@ public class LessonService implements ILessonService {
     @Transactional(readOnly = true)
     public List<LessonDTO> getLessonsByCourseId(Long courseId) {
         List<Lesson> lessons = lessonRepository.findByCourseId(courseId);
+        log.info("Found {} lessons for course ID={}", lessons.size(), courseId);
         return lessons.stream().map(this::mapToDTO).collect(Collectors.toList());
     }
 
@@ -260,7 +222,10 @@ public class LessonService implements ILessonService {
             progress.setCompletedDate(LocalDateTime.now());
         }
 
+        progress.setLastAccessed(LocalDateTime.now());
+
         LessonProgress savedProgress = progressRepository.save(progress);
+        log.info("Updated progress: User={}, Lesson={}, Status={}", username, request.getLessonId(), progress.getStatus());
         return mapToProgressDTO(savedProgress);
     }
 
@@ -282,17 +247,67 @@ public class LessonService implements ILessonService {
         User user = userRepository.findByUsername(username).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy user với username: " + username));
 
         List<LessonProgress> progresses = progressRepository.findByUserIdAndLessonSectionCourseId(user.getId(), courseId);
+        log.info("Found {} progress records for user {} in course {}", progresses.size(), username, courseId);
         return progresses.stream().map(this::mapToProgressDTO).collect(Collectors.toList());
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<LessonProgressDTO> getUserProgressByCourseForAdmin(Long courseId, Long userId) {
+        try {
+            log.info("[ADMIN] Getting progress for user {} in course {}", userId, courseId);
+
+            List<LessonProgress> userProgresses = progressRepository.findByCourseIdAndUserId(courseId, userId);
+
+            if (userProgresses.isEmpty()) {
+                log.info("[ADMIN] User {} has no progress in course {}", userId, courseId);
+                return List.of();
+            }
+
+            List<LessonProgressDTO> progressDTOs = userProgresses.stream().map(this::mapToProgressDTO).collect(Collectors.toList());
+
+            log.info("[ADMIN] Found {} progress records for user {} in course {}", progressDTOs.size(), userId, courseId);
+            return progressDTOs;
+
+        } catch (Exception e) {
+            log.error("[ADMIN] Error getting progress for user {} in course {}: {}", userId, courseId, e.getMessage());
+            throw new RuntimeException("Lỗi khi lấy tiến độ học tập: " + e.getMessage());
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<LessonProgressDTO> getAllUsersProgressByCourse(Long courseId) {
+        try {
+            log.info("[ADMIN] Getting all users progress for course {}", courseId);
+
+            List<LessonProgress> allProgress = progressRepository.findByCourseId(courseId);
+
+            if (allProgress.isEmpty()) {
+                log.info("[ADMIN] Course {} has no progress records", courseId);
+                return List.of();
+            }
+
+            List<LessonProgressDTO> progressDTOs = allProgress.stream().map(this::mapToProgressDTO).collect(Collectors.toList());
+
+            log.info("[ADMIN] Found {} progress records for course {}", progressDTOs.size(), courseId);
+            return progressDTOs;
+
+        } catch (Exception e) {
+            log.error("[ADMIN] Error getting all users progress for course {}: {}", courseId, e.getMessage());
+            throw new RuntimeException("Lỗi khi lấy tiến độ tất cả học viên: " + e.getMessage());
+        }
+    }
+
+    // ==================== MAPPING METHODS ====================
+
+    @Override
     public LessonDTO mapToDTO(Lesson lesson) {
-        return LessonDTO.builder().id(lesson.getId()).lessonTitle(lesson.getLessonTitle()).content(lesson.getContent()).videoUrl(lesson.getVideoUrl()).documentUrl(lesson.getDocumentUrl()).contentType(lesson.getContentType()).orderIndex(lesson.getOrderIndex()).duration(lesson.getDuration()) //  Số giây
-                .sectionId(lesson.getSection().getId()).sectionName(lesson.getSection().getSectionName()).build();
+        return LessonDTO.builder().id(lesson.getId()).lessonTitle(lesson.getLessonTitle()).content(lesson.getContent()).videoUrl(lesson.getVideoUrl()).documentUrl(lesson.getDocumentUrl()).contentType(lesson.getContentType()).orderIndex(lesson.getOrderIndex()).duration(lesson.getDuration()).sectionId(lesson.getSection().getId()).sectionName(lesson.getSection().getSectionName()).build();
     }
 
     private LessonProgressDTO mapToProgressDTO(LessonProgress progress) {
-        return LessonProgressDTO.builder().id(progress.getId()).status(progress.getStatus()).timeSpent(progress.getTimeSpent()).progress(calculateProgress(progress)).startedDate(progress.getStartedDate()).completedDate(progress.getCompletedDate()).lessonId(progress.getLesson().getId()).lessonTitle(progress.getLesson().getLessonTitle()).userId(progress.getUser().getId()).username(progress.getUser().getAccount() != null ? progress.getUser().getAccount().getUsername() : progress.getUser().getDisplayName()).build();
+        return LessonProgressDTO.builder().id(progress.getId()).status(progress.getStatus()).timeSpent(progress.getTimeSpent()).progress(calculateProgress(progress)).startedDate(progress.getStartedDate()).completedDate(progress.getCompletedDate()).lastAccessed(progress.getLastAccessed()).lessonId(progress.getLesson().getId()).lessonTitle(progress.getLesson().getLessonTitle()).userId(progress.getUser().getId()).username(progress.getUser().getAccount() != null ? progress.getUser().getAccount().getUsername() : progress.getUser().getDisplayName()).build();
     }
 
     private Double calculateProgress(LessonProgress progress) {

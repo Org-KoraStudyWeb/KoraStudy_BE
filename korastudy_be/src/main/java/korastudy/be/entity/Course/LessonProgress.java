@@ -26,6 +26,8 @@ public class LessonProgress {
     private LocalDateTime startedDate;
     private LocalDateTime completedDate;
 
+    private LocalDateTime lastAccessed;
+
     @ManyToOne
     @JoinColumn(name = "lesson_id")
     private Lesson lesson;

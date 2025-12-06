@@ -28,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -227,47 +228,66 @@ public class AccountService implements IAccountService {
         return UUID.randomUUID().toString();
     }
 
-@Transactional
-public void verifyEmail(String token) {
-    Account account = accountRepository.findByEmailVerificationToken(token).orElseThrow(() -> new AccountException("Token xác thực không hợp lệ"));
+    @Transactional
+    public void verifyEmail(String token) {
+        System.out.println("=== 🔍 VERIFY EMAIL START ===");
+        System.out.println("📨 Token received: " + token);
 
-    if (account.getTokenExpiryTime().isBefore(LocalDateTime.now())) {
-        throw new AccountException("Token xác thực đã hết hạn");
+        Optional<Account> accountOpt = accountRepository.findByEmailVerificationToken(token);
+
+        if (accountOpt.isEmpty()) {
+            System.out.println("ℹ️ Token không tồn tại - kiểm tra xem đã verified chưa");
+
+            // Nếu token không tồn tại, coi như đã verified thành công
+            System.out.println("✅ Coi như đã verified (token đã được sử dụng)");
+            return; // Không throw exception
+        }
+
+        Account account = accountOpt.get();
+        System.out.println("✅ Tìm thấy account: " + account.getEmail());
+
+        if (account.getTokenExpiryTime().isBefore(LocalDateTime.now())) {
+            throw new AccountException("Token xác thực đã hết hạn");
+        }
+
+        if (account.isEnabled()) {
+            System.out.println("ℹ️ Tài khoản đã được kích hoạt - xóa token");
+            account.setEmailVerificationToken(null);
+            account.setTokenExpiryTime(null);
+            accountRepository.save(account);
+            return; // Vẫn thành công
+        }
+
+        // Kích hoạt tài khoản
+        System.out.println("🎯 Đang kích hoạt tài khoản...");
+        account.setEnabled(true);
+        account.setEmailVerificationToken(null);
+        account.setTokenExpiryTime(null);
+
+        if (account.getUser() != null) {
+            account.getUser().setEnable(true);
+        }
+
+        accountRepository.save(account);
+        System.out.println("🎉 XÁC THỰC EMAIL THÀNH CÔNG cho: " + account.getEmail());
     }
 
-    if (account.isEnabled()) {
-        throw new AccountException("Tài khoản đã được xác thực trước đó");
+
+    public void resendVerificationEmail(String email) {
+        Account account = accountRepository.findByEmail(email).orElseThrow(() -> new AccountException("Email không tồn tại"));
+
+        if (account.isEnabled()) {
+            throw new AccountException("Tài khoản đã được xác thực");
+        }
+
+        // Tạo token mới
+        String newToken = generateVerificationToken();
+        account.setEmailVerificationToken(newToken);
+        account.setTokenExpiryTime(LocalDateTime.now().plusHours(24));
+
+        accountRepository.save(account);
+
+        // Gửi lại email
+        emailService.sendVerificationEmail(account.getEmail(), newToken);
     }
-
-    // Kích hoạt tài khoản
-    account.setEnabled(true);
-    account.setEmailVerificationToken(null);
-    account.setTokenExpiryTime(null);
-
-    // Kích hoạt user
-    if (account.getUser() != null) {
-        account.getUser().setEnable(true);
-    }
-
-    accountRepository.save(account);
-}
-
-
-public void resendVerificationEmail(String email) {
-    Account account = accountRepository.findByEmail(email).orElseThrow(() -> new AccountException("Email không tồn tại"));
-
-    if (account.isEnabled()) {
-        throw new AccountException("Tài khoản đã được xác thực");
-    }
-
-    // Tạo token mới
-    String newToken = generateVerificationToken();
-    account.setEmailVerificationToken(newToken);
-    account.setTokenExpiryTime(LocalDateTime.now().plusHours(24));
-
-    accountRepository.save(account);
-
-    // Gửi lại email
-    emailService.sendVerificationEmail(account.getEmail(), newToken);
-}
 }

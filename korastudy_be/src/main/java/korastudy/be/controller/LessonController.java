@@ -114,4 +114,22 @@ public class LessonController {
         List<LessonProgressDTO> progresses = lessonService.getUserProgressByCourse(courseId, username);
         return ResponseEntity.ok(progresses);
     }
+
+    // ==================== ADMIN PROGRESS APIs ====================
+
+    @GetMapping("/admin/course/{courseId}/progress/all")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CONTENT_MANAGER')")
+    public ResponseEntity<List<LessonProgressDTO>> getAllUsersProgressByCourse(@PathVariable Long courseId) {
+        List<LessonProgressDTO> progresses = lessonService.getAllUsersProgressByCourse(courseId);
+        return ResponseEntity.ok(progresses);
+    }
+
+    @GetMapping("/admin/course/{courseId}/user/{userId}/progress")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CONTENT_MANAGER')")
+    public ResponseEntity<List<LessonProgressDTO>> getUserProgressByCourseForAdmin(
+            @PathVariable Long courseId,
+            @PathVariable Long userId) {
+        List<LessonProgressDTO> progresses = lessonService.getUserProgressByCourseForAdmin(courseId, userId);
+        return ResponseEntity.ok(progresses);
+    }
 }

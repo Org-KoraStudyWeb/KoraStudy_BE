@@ -15,6 +15,7 @@ public class LessonProgressDTO {
     private Double progress; // 0.0 - 1.0
     private LocalDateTime startedDate;
     private LocalDateTime completedDate;
+    private LocalDateTime lastAccessed;
     private Long lessonId;
     private String lessonTitle;
     private Long userId;

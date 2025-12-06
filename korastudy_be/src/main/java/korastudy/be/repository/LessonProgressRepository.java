@@ -33,4 +33,15 @@ public interface LessonProgressRepository extends JpaRepository<LessonProgress, 
     // Kiểm tra trạng thái cụ thể
     boolean existsByUserIdAndLessonIdAndStatus(Long userId, Long lessonId, ProgressStatus status);
 
+    @Query("SELECT lp FROM LessonProgress lp JOIN lp.lesson l WHERE l.section.course.id = :courseId")
+    List<LessonProgress> findByCourseId(@Param("courseId") Long courseId);
+
+    // Cho getUserProgressByCourseForAdmin - lấy progress của user cụ thể
+    @Query("SELECT lp FROM LessonProgress lp JOIN lp.lesson l WHERE l.section.course.id = :courseId AND lp.user.id = :userId")
+    List<LessonProgress> findByCourseIdAndUserId(@Param("courseId") Long courseId, @Param("userId") Long userId);
+
+    // Cho logic mapping - tìm progress theo lessonId và userId
+    @Query("SELECT lp FROM LessonProgress lp WHERE lp.lesson.id = :lessonId AND lp.user.id = :userId")
+    Optional<LessonProgress> findByLessonIdAndUserId(@Param("lessonId") Long lessonId, @Param("userId") Long userId);
+
 }
