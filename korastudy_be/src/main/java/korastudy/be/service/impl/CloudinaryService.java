@@ -9,6 +9,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.text.Normalizer;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -19,23 +21,50 @@ public class CloudinaryService implements IUploadService {
 
     private final Cloudinary cloudinary;
 
-    private static final int UPLOAD_TIMEOUT_MS = 120000;
-    private static final int VIDEO_UPLOAD_TIMEOUT_MS = 300000;
     private static final int MAX_FILE_SIZE_MB = 500;
     private static final int MAX_VIDEO_SIZE_MB = 100;
+
+    // =========== OVERLOAD METHODS (KHÔNG CẦN TITLE) ===========
+
+    @Override
+    public String uploadImage(MultipartFile file) {
+        // Gọi phương thức có title với title là filename
+        String title = file != null && file.getOriginalFilename() != null ? file.getOriginalFilename() : "image_" + System.currentTimeMillis();
+        return uploadImage(file, title);
+    }
+
+    @Override
+    public String uploadVideo(MultipartFile file) {
+        String title = file != null && file.getOriginalFilename() != null ? file.getOriginalFilename() : "video_" + System.currentTimeMillis();
+        return uploadVideo(file, title);
+    }
+
+    @Override
+    public String uploadDocument(MultipartFile file) {
+        String title = file != null && file.getOriginalFilename() != null ? file.getOriginalFilename() : "document_" + System.currentTimeMillis();
+        return uploadDocument(file, title);
+    }
+
+    @Override
+    public String uploadAudio(MultipartFile file) {
+        String title = file != null && file.getOriginalFilename() != null ? file.getOriginalFilename() : "audio_" + System.currentTimeMillis();
+        return uploadAudio(file, title);
+    }
+
+    // =========== ORIGINAL METHODS (VỚI TITLE) ===========
 
     @Override
     public String uploadImage(MultipartFile file, String title) {
         validateFile(file, "image", MAX_FILE_SIZE_MB);
 
         try {
-            String publicId = generateSimplePublicId(title, file.getOriginalFilename(), "course-images");
+            String publicId = generateSafeFileNameForAllTypes(file.getOriginalFilename(), title);
 
-            Map<String, Object> uploadParams = ObjectUtils.asMap("resource_type", "image", "folder", "korastudy/course-images", "public_id", publicId, "transformation", "q_auto");
+            Map<String, Object> uploadParams = ObjectUtils.asMap("resource_type", "image", "folder", "korastudy/course-images", "public_id", publicId, "transformation", "q_auto", "use_filename", false, "unique_filename", false, "overwrite", true);
 
             Map uploadResult = cloudinary.uploader().upload(file.getBytes(), uploadParams);
             String url = uploadResult.get("secure_url").toString();
-            log.info("Image uploaded successfully: {}", url);
+            log.info("Image uploaded: {}", url);
             return url;
         } catch (IOException e) {
             log.error("Image upload failed", e);
@@ -48,36 +77,23 @@ public class CloudinaryService implements IUploadService {
         validateFile(file, "video", MAX_VIDEO_SIZE_MB);
 
         try {
-            String publicId = generateSimplePublicId(title, file.getOriginalFilename(), "course-videos");
+            String publicId = generateSafeFileNameForAllTypes(file.getOriginalFilename(), title);
 
-            Map<String, Object> uploadParams = ObjectUtils.asMap("resource_type", "video", "folder", "korastudy/course-videos", "public_id", publicId, "quality", "auto", "chunk_size", 6000000);
+            Map<String, Object> uploadParams = ObjectUtils.asMap("resource_type", "video", "folder", "korastudy/course-videos", "public_id", publicId, "quality", "auto", "chunk_size", 6000000, "use_filename", false, "unique_filename", false, "overwrite", true);
 
-            log.info("Starting video upload: {} (size: {} MB)", file.getOriginalFilename(), file.getSize() / (1024 * 1024));
+            log.info("Uploading video: {} ({} MB)", file.getOriginalFilename(), file.getSize() / (1024 * 1024));
 
             Map uploadResult = cloudinary.uploader().upload(file.getBytes(), uploadParams);
+            String url = uploadResult.get("secure_url").toString();
 
-            String url = null;
-            if (uploadResult.get("secure_url") != null) {
-                url = uploadResult.get("secure_url").toString();
-            } else if (uploadResult.get("url") != null) {
-                url = uploadResult.get("url").toString();
-            }
-
-            if (url == null) {
-                log.error("Upload failed - no URL returned. Full result: {}", uploadResult);
-                throw new RuntimeException("Upload failed: No URL returned");
-            }
-
-            log.info("Video uploaded successfully: {}", url);
+            log.info("Video uploaded: {}", url);
             return url;
 
         } catch (IOException e) {
-            log.error("Video upload failed for file: {}", file.getOriginalFilename(), e);
-
+            log.error("Video upload failed: {}", file.getOriginalFilename(), e);
             if (e.getMessage().contains("timeout") || e.getMessage().contains("Timeout")) {
                 throw new RuntimeException("Upload video timeout - File quá lớn hoặc kết nối chậm. Vui lòng thử lại với file nhỏ hơn.");
             }
-
             throw new RuntimeException("Lỗi khi upload video: " + e.getMessage());
         }
     }
@@ -87,17 +103,44 @@ public class CloudinaryService implements IUploadService {
         validateFile(file, "document", MAX_FILE_SIZE_MB);
 
         try {
-            String publicId = generateSimplePublicId(title, file.getOriginalFilename(), "course-documents");
+            String originalFilename = file.getOriginalFilename();
 
-            Map<String, Object> uploadParams = ObjectUtils.asMap("resource_type", "raw", "folder", "korastudy/course-documents", "public_id", publicId, "overwrite", true, "invalidate", true, "type", "upload" // ← QUAN TRỌNG: đảm bảo file public
-            );
+            // Tạo public_id từ filename (đã được frontend xử lý)
+            String publicId = generateSafeFileNameForAllTypes(originalFilename, title);
 
+            log.info("Document detected: {}, using safe name: {}", originalFilename, publicId);
+
+            // TẠO UPLOAD PARAMS - KHÔNG phân biệt PDF nữa, upload tất cả dưới dạng raw
+            Map<String, Object> uploadParams = new HashMap<>();
+
+            // Luôn dùng resource_type raw cho documents
+            uploadParams.put("resource_type", "raw");
+            uploadParams.put("folder", "korastudy/course-documents");
+            uploadParams.put("public_id", publicId); // Giữ nguyên extension
+
+            // Xác định content type
+            String contentType = determineContentType(originalFilename);
+            if (contentType != null) {
+                uploadParams.put("content_type", contentType);
+            }
+
+            // COMMON PARAMS
+            uploadParams.put("use_filename", false);
+            uploadParams.put("unique_filename", false);
+            uploadParams.put("overwrite", true);
+            uploadParams.put("invalidate", true);
+
+            log.info("Uploading Document: {} -> {}", originalFilename, publicId);
+
+            // UPLOAD
             Map uploadResult = cloudinary.uploader().upload(file.getBytes(), uploadParams);
             String url = uploadResult.get("secure_url").toString();
+
             log.info("Document uploaded successfully: {}", url);
             return url;
+
         } catch (IOException e) {
-            log.error("Document upload failed", e);
+            log.error("Document upload failed for file: {}", file.getOriginalFilename(), e);
             throw new RuntimeException("Lỗi khi upload document: " + e.getMessage());
         }
     }
@@ -107,13 +150,15 @@ public class CloudinaryService implements IUploadService {
         validateFile(file, "audio", MAX_FILE_SIZE_MB);
 
         try {
-            String publicId = generateSimplePublicId(title, file.getOriginalFilename(), "exam-audio");
+            String publicId = generateSafeFileNameForAllTypes(file.getOriginalFilename(), title);
 
-            Map<String, Object> uploadParams = ObjectUtils.asMap("resource_type", "video", "folder", "korastudy/exam-audio", "public_id", publicId);
+            Map<String, Object> uploadParams = ObjectUtils.asMap("resource_type", "video", // Cloudinary xử lý audio như video
+                    "folder", "korastudy/exam-audio", "public_id", publicId, "use_filename", false, "unique_filename", false, "overwrite", true);
 
             Map uploadResult = cloudinary.uploader().upload(file.getBytes(), uploadParams);
             String url = uploadResult.get("secure_url").toString();
-            log.info("Audio uploaded successfully: {}", url);
+
+            log.info("Audio uploaded: {}", url);
             return url;
         } catch (IOException e) {
             log.error("Audio upload failed", e);
@@ -124,16 +169,16 @@ public class CloudinaryService implements IUploadService {
     @Override
     public void deleteFile(String fileUrl) {
         try {
-            String publicId = extractPublicIdSimple(fileUrl);
+            String publicId = extractPublicIdFromUrl(fileUrl);
 
             if (publicId != null) {
                 String resourceType = determineResourceType(fileUrl);
 
-                log.info("Deleting file - URL: {}, Public ID: {}, Resource Type: {}", fileUrl, publicId, resourceType);
+                log.info("Deleting file: {}, Public ID: {}", fileUrl, publicId);
 
                 Map result = cloudinary.uploader().destroy(publicId, ObjectUtils.asMap("resource_type", resourceType));
 
-                log.info("File deleted successfully from Cloudinary: {}", publicId);
+                log.info("File deleted: {}", publicId);
             } else {
                 log.warn("Cannot extract public_id from URL: {}", fileUrl);
                 throw new RuntimeException("Không thể xác định public_id từ URL: " + fileUrl);
@@ -144,87 +189,176 @@ public class CloudinaryService implements IUploadService {
         }
     }
 
-    private void validateFile(MultipartFile file, String fileType, int maxSizeMB) {
-        if (file.isEmpty()) {
-            throw new IllegalArgumentException("File không được để trống");
+    // ==================== PRIVATE METHODS ====================
+
+    /**
+     * Tạo tên file an toàn cho tất cả loại (PDF, DOCX, DOC, v.v.)
+     * Đã được frontend xử lý, backend chỉ đảm bảo an toàn
+     */
+    private String generateSafeFileNameForAllTypes(String originalFilename, String title) {
+        String filenameToProcess = originalFilename;
+
+        // Nếu không có filename, dùng title
+        if (filenameToProcess == null || filenameToProcess.trim().isEmpty()) {
+            filenameToProcess = title;
         }
 
-        long maxSizeBytes = maxSizeMB * 1024 * 1024;
-        if (file.getSize() > maxSizeBytes) {
-            throw new IllegalArgumentException(String.format("%s không được vượt quá %dMB", fileType.substring(0, 1).toUpperCase() + fileType.substring(1), maxSizeMB));
+        // Nếu vẫn không có, tạo tên ngẫu nhiên
+        if (filenameToProcess == null || filenameToProcess.trim().isEmpty()) {
+            return "file_" + UUID.randomUUID().toString().substring(0, 8);
         }
 
-        if ("video".equals(fileType)) {
-            if (!isVideoFile(file)) {
-                throw new IllegalArgumentException("Chỉ chấp nhận video định dạng MP4, AVI, MOV, WMV");
-            }
-        } else if ("image".equals(fileType)) {
-            if (!isImageFile(file)) {
-                throw new IllegalArgumentException("Chỉ chấp nhận ảnh định dạng JPG, PNG, GIF");
-            }
-        } else if ("audio".equals(fileType)) {
-            if (!isAudioFile(file)) {
-                throw new IllegalArgumentException("Chỉ chấp nhận audio định dạng MP3, WAV");
-            }
+        // BƯỚC 1: Loại bỏ extension trùng trước khi xử lý
+        filenameToProcess = fixDuplicateExtension(filenameToProcess);
+
+        // BƯỚC 2: Xử lý bình thường
+        return processFilename(filenameToProcess);
+    }
+
+    /**
+     * Fix duplicate extensions (e.g., .mp4.mp4 -> .mp4)
+     */
+    private String fixDuplicateExtension(String filename) {
+        if (filename == null) return filename;
+
+        // Tìm tất cả các dấu chấm
+        int lastDotIndex = filename.lastIndexOf('.');
+        if (lastDotIndex <= 0) return filename; // Không có extension
+
+        int secondLastDotIndex = filename.lastIndexOf('.', lastDotIndex - 1);
+        if (secondLastDotIndex <= 0) return filename; // Chỉ có 1 dấu chấm
+
+        // Lấy 2 extension cuối cùng
+        String lastExtension = filename.substring(lastDotIndex).toLowerCase();
+        String secondLastExtension = filename.substring(secondLastDotIndex, lastDotIndex).toLowerCase();
+
+        // Nếu 2 extension giống nhau
+        if (lastExtension.equals(secondLastExtension)) {
+            // Xóa extension trùng
+            String fixedName = filename.substring(0, secondLastDotIndex) + lastExtension;
+            log.info("Fixed duplicate extension: {} -> {}", filename, fixedName);
+            return fixedName;
         }
 
-        log.info("File validated: {} (size: {} MB, type: {})", file.getOriginalFilename(), file.getSize() / (1024 * 1024), file.getContentType());
+        return filename;
     }
 
-    private boolean isVideoFile(MultipartFile file) {
-        String contentType = file.getContentType();
-        String fileName = file.getOriginalFilename().toLowerCase();
-        return (contentType != null && contentType.startsWith("video/")) || fileName.endsWith(".mp4") || fileName.endsWith(".avi") || fileName.endsWith(".mov") || fileName.endsWith(".wmv");
+    /**
+     * Process filename after fixing duplicates
+     */
+    private String processFilename(String filename) {
+        String nameWithoutExt = filename;
+        String extension = "";
+
+        int lastDotIndex = filename.lastIndexOf('.');
+        if (lastDotIndex > 0 && lastDotIndex < filename.length() - 1) {
+            extension = filename.substring(lastDotIndex).toLowerCase();
+            nameWithoutExt = filename.substring(0, lastDotIndex);
+        }
+
+        // Chuẩn hóa tên file
+        String normalizedName = normalizeVietnameseIfNeeded(nameWithoutExt);
+
+        String safeName = normalizedName.replaceAll("[\\\\/:*?\"<>|]", "_").replaceAll("[\\s]+", "_").replaceAll("_{2,}", "_").replaceAll("^_+|_+$", "").toLowerCase().trim();
+
+        if (safeName.isEmpty()) {
+            safeName = "file_" + UUID.randomUUID().toString().substring(0, 8);
+        }
+
+        int maxNameLength = 80;
+        if (safeName.length() > maxNameLength) {
+            safeName = safeName.substring(0, maxNameLength);
+        }
+
+        return safeName + extension;
     }
 
-    private boolean isImageFile(MultipartFile file) {
-        String contentType = file.getContentType();
-        return contentType != null && contentType.startsWith("image/");
-    }
+    /**
+     * Chuẩn hóa tiếng Việt - bỏ dấu
+     */
+    private String normalizeVietnameseIfNeeded(String input) {
+        if (input == null || input.trim().isEmpty()) {
+            return input;
+        }
 
-    private boolean isAudioFile(MultipartFile file) {
-        String contentType = file.getContentType();
-        String fileName = file.getOriginalFilename().toLowerCase();
-        return (contentType != null && contentType.startsWith("audio/")) || fileName.endsWith(".mp3") || fileName.endsWith(".wav");
-    }
-
-    private String extractPublicIdSimple(String url) {
         try {
-            // Tách URL để lấy phần sau /upload/
-            int uploadIndex = url.indexOf("/upload/");
-            if (uploadIndex == -1) {
+            // Kiểm tra xem có chứa ký tự tiếng Việt có dấu không
+            boolean hasVietnameseAccents = input.matches(".*[áàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđÁÀẢÃẠĂẮẰẲẴẶÂẤẦẨẪẬÉÈẺẼẸÊẾỀỂỄỆÍÌỈĨỊÓÒỎÕỌÔỐỒỔỖỘƠỚỜỞỠỢÚÙỦŨỤƯỨỪỬỮỰÝỲỶỸỴĐ].*");
+
+            if (!hasVietnameseAccents) {
+                return input; // Không cần xử lý
+            }
+
+            // Bỏ dấu tiếng Việt
+            String temp = Normalizer.normalize(input, Normalizer.Form.NFD);
+            temp = temp.replaceAll("\\p{M}", ""); // Loại bỏ các ký tự dấu
+            temp = temp.replace('đ', 'd').replace('Đ', 'D');
+            return temp;
+        } catch (Exception e) {
+            log.warn("Failed to normalize Vietnamese text: {}", input, e);
+            // Fallback: chỉ giữ chữ cái, số, dấu gạch dưới
+            return input.replaceAll("[^a-zA-Z0-9\\s]", "_");
+        }
+    }
+
+    /**
+     * Xác định content type dựa trên extension
+     */
+    private String determineContentType(String filename) {
+        if (filename == null) return null;
+
+        String lowerFilename = filename.toLowerCase();
+
+        if (lowerFilename.endsWith(".pdf")) {
+            return "application/pdf";
+        } else if (lowerFilename.endsWith(".docx")) {
+            return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+        } else if (lowerFilename.endsWith(".doc")) {
+            return "application/msword";
+        } else if (lowerFilename.endsWith(".txt")) {
+            return "text/plain";
+        } else if (lowerFilename.endsWith(".ppt") || lowerFilename.endsWith(".pptx")) {
+            return "application/vnd.ms-powerpoint";
+        } else if (lowerFilename.endsWith(".xls") || lowerFilename.endsWith(".xlsx")) {
+            return "application/vnd.ms-excel";
+        } else if (lowerFilename.endsWith(".zip")) {
+            return "application/zip";
+        } else if (lowerFilename.endsWith(".rar")) {
+            return "application/x-rar-compressed";
+        } else if (lowerFilename.endsWith(".jpg") || lowerFilename.endsWith(".jpeg")) {
+            return "image/jpeg";
+        } else if (lowerFilename.endsWith(".png")) {
+            return "image/png";
+        } else if (lowerFilename.endsWith(".gif")) {
+            return "image/gif";
+        } else if (lowerFilename.endsWith(".mp3")) {
+            return "audio/mpeg";
+        } else if (lowerFilename.endsWith(".wav")) {
+            return "audio/wav";
+        } else if (lowerFilename.endsWith(".mp4")) {
+            return "video/mp4";
+        }
+
+        return "application/octet-stream"; // default
+    }
+
+    /**
+     * Extract public_id từ URL
+     */
+    private String extractPublicIdFromUrl(String url) {
+        try {
+            String[] parts = url.split("/upload/");
+            if (parts.length < 2) {
                 return null;
             }
 
-            String pathAfterUpload = url.substring(uploadIndex + "/upload/".length());
+            String pathAfterUpload = parts[1];
 
-            // Xóa phần version (v123456789/)
-            if (pathAfterUpload.startsWith("v")) {
-                int slashIndex = pathAfterUpload.indexOf("/");
-                if (slashIndex > 0 && pathAfterUpload.length() > 1 && Character.isDigit(pathAfterUpload.charAt(1))) {
-                    pathAfterUpload = pathAfterUpload.substring(slashIndex + 1);
-                }
+            int queryIndex = pathAfterUpload.indexOf('?');
+            if (queryIndex > 0) {
+                pathAfterUpload = pathAfterUpload.substring(0, queryIndex);
             }
 
-            // Xóa các transformation flags nếu có (f_auto, fl_attachment, etc.)
-            if (pathAfterUpload.startsWith("f_") || pathAfterUpload.startsWith("fl_")) {
-                int slashIndex = pathAfterUpload.indexOf("/");
-                if (slashIndex > 0) {
-                    pathAfterUpload = pathAfterUpload.substring(slashIndex + 1);
-
-                    // Có thể có nhiều transformation flags
-                    while (pathAfterUpload.startsWith("f_") || pathAfterUpload.startsWith("fl_")) {
-                        slashIndex = pathAfterUpload.indexOf("/");
-                        if (slashIndex > 0) {
-                            pathAfterUpload = pathAfterUpload.substring(slashIndex + 1);
-                        } else {
-                            break;
-                        }
-                    }
-                }
-            }
-
-            // Tìm phần bắt đầu từ korastudy/
             int korastudyIndex = pathAfterUpload.indexOf("korastudy/");
             if (korastudyIndex == -1) {
                 return null;
@@ -238,6 +372,9 @@ public class CloudinaryService implements IUploadService {
         }
     }
 
+    /**
+     * Xác định resource type từ URL
+     */
     private String determineResourceType(String url) {
         if (url.contains("/image/upload/")) {
             return "image";
@@ -246,55 +383,61 @@ public class CloudinaryService implements IUploadService {
         } else if (url.contains("/raw/upload/")) {
             return "raw";
         } else {
-            // Phân tích từ URL
-            if (url.contains("/course-documents/")) {
-                return "raw";
-            } else if (url.contains("/course-images/")) {
-                return "image";
-            } else if (url.contains("/course-videos/") || url.contains("/exam-audio/")) {
-                return "video";
-            } else {
-                return "image"; // default
+            return "image"; // default
+        }
+    }
+
+    /**
+     * Validate file
+     */
+    private void validateFile(MultipartFile file, String fileType, int maxSizeMB) {
+        if (file.isEmpty()) {
+            throw new IllegalArgumentException("File không được để trống");
+        }
+
+        String originalFilename = file.getOriginalFilename();
+        if (originalFilename == null || originalFilename.trim().isEmpty()) {
+            throw new IllegalArgumentException("Tên file không được để trống");
+        }
+
+        long maxSizeBytes = maxSizeMB * 1024 * 1024;
+        if (file.getSize() > maxSizeBytes) {
+            throw new IllegalArgumentException(String.format("%s không được vượt quá %dMB", fileType.substring(0, 1).toUpperCase() + fileType.substring(1), maxSizeMB));
+        }
+
+        if ("video".equals(fileType)) {
+            if (!isVideoFile(file)) {
+                throw new IllegalArgumentException("Chỉ chấp nhận video định dạng MP4, AVI, MOV, WMV, MKV");
+            }
+        } else if ("image".equals(fileType)) {
+            if (!isImageFile(file)) {
+                throw new IllegalArgumentException("Chỉ chấp nhận ảnh định dạng JPG, PNG, GIF, WEBP");
+            }
+        } else if ("audio".equals(fileType)) {
+            if (!isAudioFile(file)) {
+                throw new IllegalArgumentException("Chỉ chấp nhận audio định dạng MP3, WAV, M4A");
             }
         }
+        // Document không check cụ thể vì có nhiều loại
+
+        log.debug("File validated: {} ({} MB)", originalFilename, file.getSize() / (1024 * 1024));
     }
 
-    private String generateSimplePublicId(String title, String originalFilename, String folder) {
-        String baseName;
-
-        if (title != null && !title.trim().isEmpty()) {
-            baseName = sanitizeFileName(title);
-        } else if (originalFilename != null) {
-            baseName = sanitizeFileName(originalFilename);
-        } else {
-            baseName = UUID.randomUUID().toString();
-        }
-
-        return baseName;
+    private boolean isVideoFile(MultipartFile file) {
+        String contentType = file.getContentType();
+        String fileName = file.getOriginalFilename().toLowerCase();
+        return (contentType != null && contentType.startsWith("video/")) || fileName.endsWith(".mp4") || fileName.endsWith(".avi") || fileName.endsWith(".mov") || fileName.endsWith(".wmv") || fileName.endsWith(".mkv") || fileName.endsWith(".flv");
     }
 
-    private String sanitizeFileName(String fileName) {
-        if (fileName == null || fileName.isEmpty()) {
-            return fileName;
-        }
+    private boolean isImageFile(MultipartFile file) {
+        String contentType = file.getContentType();
+        String fileName = file.getOriginalFilename().toLowerCase();
+        return (contentType != null && contentType.startsWith("image/")) || fileName.endsWith(".jpg") || fileName.endsWith(".jpeg") || fileName.endsWith(".png") || fileName.endsWith(".gif") || fileName.endsWith(".webp") || fileName.endsWith(".bmp");
+    }
 
-        // Tìm dấu chấm cuối cùng để tách đuôi file
-        int lastDotIndex = fileName.lastIndexOf('.');
-        String namePart, extensionPart = "";
-
-        if (lastDotIndex > 0) {
-            namePart = fileName.substring(0, lastDotIndex);
-            extensionPart = fileName.substring(lastDotIndex); // Giữ nguyên đuôi file
-        } else {
-            namePart = fileName;
-        }
-
-        // Chỉ sanitize phần tên file, không ảnh hưởng đuôi
-        String sanitizedName = namePart.replaceAll("[^a-zA-Z0-9-_.]", "_").replaceAll("_{2,}", "_").replaceAll("^_|_$", "").toLowerCase();
-
-        // Đảm bảo không có nhiều dấu chấm liên tiếp trong tên
-        sanitizedName = sanitizedName.replaceAll("\\.{2,}", ".");
-
-        return sanitizedName + extensionPart;
+    private boolean isAudioFile(MultipartFile file) {
+        String contentType = file.getContentType();
+        String fileName = file.getOriginalFilename().toLowerCase();
+        return (contentType != null && contentType.startsWith("audio/")) || fileName.endsWith(".mp3") || fileName.endsWith(".wav") || fileName.endsWith(".m4a") || fileName.endsWith(".ogg") || fileName.endsWith(".flac");
     }
 }

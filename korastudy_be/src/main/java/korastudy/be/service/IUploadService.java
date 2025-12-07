@@ -4,7 +4,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 public interface IUploadService {
 
-    // Method với title
+    // =========== METHODS VỚI TITLE (CHO BACKWARD COMPATIBLE) ===========
     String uploadImage(MultipartFile file, String title);
 
     String uploadVideo(MultipartFile file, String title);
@@ -13,22 +13,14 @@ public interface IUploadService {
 
     String uploadAudio(MultipartFile file, String title);
 
-    // ✅ THÊM: Overload method không cần title (backward compatible)
-    default String uploadImage(MultipartFile file) {
-        return uploadImage(file, file != null ? file.getOriginalFilename() : "untitled");
-    }
+    // =========== METHODS KHÔNG CẦN TITLE (NEW) ===========
+    String uploadImage(MultipartFile file);
 
-    default String uploadVideo(MultipartFile file) {
-        return uploadVideo(file, file != null ? file.getOriginalFilename() : "untitled");
-    }
+    String uploadVideo(MultipartFile file);
 
-    default String uploadDocument(MultipartFile file) {
-        return uploadDocument(file, file != null ? file.getOriginalFilename() : "untitled");
-    }
+    String uploadDocument(MultipartFile file);
 
-    default String uploadAudio(MultipartFile file) {
-        return uploadAudio(file, file != null ? file.getOriginalFilename() : "untitled");
-    }
+    String uploadAudio(MultipartFile file);
 
     void deleteFile(String fileUrl);
 }
