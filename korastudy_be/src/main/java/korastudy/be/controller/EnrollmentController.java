@@ -3,10 +3,12 @@ package korastudy.be.controller;
 import jakarta.validation.Valid;
 import korastudy.be.dto.request.enrollment.EnrollmentRequest;
 import korastudy.be.dto.response.enrollment.EnrollmentDTO;
+import korastudy.be.entity.Course.Course;
 import korastudy.be.entity.Enum.EnrollmentStatus;
 import korastudy.be.entity.User.User;
 import korastudy.be.exception.ResourceNotFoundException;
 import korastudy.be.payload.response.ApiSuccess;
+import korastudy.be.repository.CourseRepository;
 import korastudy.be.repository.UserRepository;
 import korastudy.be.service.IEnrollmentService;
 import lombok.RequiredArgsConstructor;
@@ -19,7 +21,9 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/enrollments")
@@ -28,6 +32,7 @@ public class EnrollmentController {
 
     private final IEnrollmentService enrollmentService;
     private final UserRepository userRepository;
+    private final CourseRepository courseRepository;
 
     /*
      * Đăng ký khóa học free thôi còn nếu đăng ký khóa học có phí thì sẽ qua payment
@@ -38,6 +43,16 @@ public class EnrollmentController {
         String username = principal.getName();
         EnrollmentDTO enrollmentDTO = enrollmentService.enrollUserToCourse(request, username);
         return ResponseEntity.status(HttpStatus.CREATED).body(enrollmentDTO);
+    }
+
+    // Trong CourseController
+    @GetMapping("/{courseId}/check-free")
+    public ResponseEntity<Map<String, Boolean>> checkCourseIsFree(@PathVariable Long courseId) {
+        Course course = courseRepository.findById(courseId).orElseThrow(() -> new ResourceNotFoundException("Course not found"));
+
+        boolean isFree = course.getCoursePrice() <= 0 || course.isFree();
+
+        return ResponseEntity.ok(Collections.singletonMap("isFree", isFree));
     }
 
     @GetMapping("/{id}")
