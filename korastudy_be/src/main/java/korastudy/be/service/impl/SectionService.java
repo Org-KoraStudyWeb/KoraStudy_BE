@@ -4,10 +4,13 @@ import korastudy.be.dto.request.course.SectionCreateRequest;
 import korastudy.be.dto.response.course.LessonDTO;
 import korastudy.be.dto.response.course.SectionDTO;
 import korastudy.be.dto.response.quiz.QuizDTO;
+import korastudy.be.dto.response.quiz.QuizSummaryDTO;  // ⭐ THÊM IMPORT
 import korastudy.be.entity.Course.Course;
 import korastudy.be.entity.Course.Section;
 import korastudy.be.exception.ResourceNotFoundException;
+import korastudy.be.mapper.QuizAdminMapper;
 import korastudy.be.repository.CourseRepository;
+import korastudy.be.repository.QuizRepository;
 import korastudy.be.repository.SectionRepository;
 import korastudy.be.service.ILessonService;
 import korastudy.be.service.IQuizService;
@@ -24,53 +27,44 @@ public class SectionService implements ISectionService {
 
     private final SectionRepository sectionRepository;
     private final CourseRepository courseRepository;
+    private final QuizRepository quizRepository;
     private final ILessonService lessonService;
     private final IQuizService quizService;
 
     @Override
     public SectionDTO createSection(SectionCreateRequest request) {
-        Course course = courseRepository.findById(request.getCourseId())
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy khóa học với ID: " + request.getCourseId()));
+        Course course = courseRepository.findById(request.getCourseId()).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy khóa học với ID: " + request.getCourseId()));
 
-        Section section = Section.builder()
-                .sectionName(request.getSectionName())
-                .orderIndex(request.getOrderIndex())
-                .course(course)
-                .build();
-                
+        Section section = Section.builder().sectionName(request.getSectionName()).orderIndex(request.getOrderIndex()).course(course).build();
+
         Section savedSection = sectionRepository.save(section);
         return mapToDTO(savedSection);
     }
 
     @Override
     public SectionDTO updateSection(Long sectionId, SectionCreateRequest request) {
-        Section section = sectionRepository.findById(sectionId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy chương học với ID: " + sectionId));
-                
-        Course course = courseRepository.findById(request.getCourseId())
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy khóa học với ID: " + request.getCourseId()));
-                
+        Section section = sectionRepository.findById(sectionId).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy chương học với ID: " + sectionId));
+
+        Course course = courseRepository.findById(request.getCourseId()).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy khóa học với ID: " + request.getCourseId()));
+
         section.setSectionName(request.getSectionName());
         section.setOrderIndex(request.getOrderIndex());
         section.setCourse(course);
-        
+
         Section updatedSection = sectionRepository.save(section);
         return mapToDTO(updatedSection);
     }
 
     @Override
     public SectionDTO getSectionById(Long sectionId) {
-        Section section = sectionRepository.findById(sectionId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy chương học với ID: " + sectionId));
+        Section section = sectionRepository.findById(sectionId).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy chương học với ID: " + sectionId));
         return mapToDTO(section);
     }
 
     @Override
     public List<SectionDTO> getSectionsByCourseId(Long courseId) {
         List<Section> sections = sectionRepository.findByCourseIdOrderByOrderIndex(courseId);
-        return sections.stream()
-                .map(this::mapToDTO)
-                .collect(Collectors.toList());
+        return sections.stream().map(this::mapToDTO).collect(Collectors.toList());
     }
 
     @Override
@@ -83,36 +77,22 @@ public class SectionService implements ISectionService {
 
     @Override
     public SectionDTO mapToDTO(Section section) {
-        List<LessonDTO> lessonDTOs = section.getLessons() != null ?
-                section.getLessons().stream()
-                        .map(lessonService::mapToDTO)
-                        .collect(Collectors.toList()) : 
-                List.of();
-                
-        return SectionDTO.builder()
-                .id(section.getId())
-                .sectionName(section.getSectionName())
-                .orderIndex(section.getOrderIndex())
-                .lessons(lessonDTOs)
-                .build();
+        List<LessonDTO> lessonDTOs = section.getLessons() != null ? section.getLessons().stream().map(lessonService::mapToDTO).collect(Collectors.toList()) : List.of();
+
+        return SectionDTO.builder().id(section.getId()).sectionName(section.getSectionName()).orderIndex(section.getOrderIndex()).lessons(lessonDTOs).build();
     }
 
     public SectionDTO getSectionWithContent(Long sectionId) {
-        Section section = sectionRepository.findById(sectionId)
-                .orElseThrow(() -> new ResourceNotFoundException("Section not found"));
+        Section section = sectionRepository.findById(sectionId).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy section với ID: " + sectionId));
 
-        // Lấy lessons (videos, documents)
+        // Lấy lessons
         List<LessonDTO> lessons = lessonService.getLessonsBySectionId(sectionId);
 
-        // Lấy quizzes của section
-        List<QuizDTO> quizzes = quizService.getQuizzesBySectionId(sectionId);
+        // Lấy quizzes TRỰC TIẾP từ repository
+        List<korastudy.be.entity.Course.Quiz> quizzes = quizRepository.findBySectionId(sectionId);
+        List<QuizDTO> quizDTOs = quizzes.stream().map(QuizAdminMapper::toQuizDTO).collect(Collectors.toList());
 
-        return SectionDTO.builder()
-                .id(section.getId())
-                .sectionName(section.getSectionName())
-                .orderIndex(section.getOrderIndex())
-                .lessons(lessons)
-                .quizzes(quizzes)
+        return SectionDTO.builder().id(section.getId()).sectionName(section.getSectionName()).orderIndex(section.getOrderIndex()).lessons(lessons).quizzes(quizDTOs)  // ✅ List<QuizDTO>
                 .build();
     }
 }

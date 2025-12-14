@@ -24,14 +24,20 @@ public class Question extends BaseTimeEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "question_type")
-    private QuestionType questionType; // SINGLE_CHOICE, MULTIPLE_CHOICE
+    private QuestionType questionType;
 
     @Column(name = "score")
     private Double score;
 
-    // Thứ tự câu hỏi trong quiz
     @Column(name = "order_index")
     private Integer orderIndex;
+
+    @Column(name = "image_url", columnDefinition = "NVARCHAR(500)")
+    private String imageUrl; // URL hình minh họa cho câu hỏi
+
+    // Giải thích đáp án (hiển thị sau khi làm xong)
+    @Column(name = "explanation", columnDefinition = "NVARCHAR(MAX)")
+    private String explanation;
 
     @ManyToOne
     @JoinColumn(name = "quiz_id")

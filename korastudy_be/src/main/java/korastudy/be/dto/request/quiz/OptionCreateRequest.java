@@ -17,4 +17,6 @@ public class OptionCreateRequest {
 
     @NotNull(message = "Trạng thái đúng/sai không được để trống")
     private Boolean isCorrect;
+
+    private String imageUrl;
 }

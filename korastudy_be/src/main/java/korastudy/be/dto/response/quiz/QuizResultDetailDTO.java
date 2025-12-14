@@ -10,5 +10,5 @@ import java.util.List;
 public class QuizResultDetailDTO {
     private TestResultDTO summary;
     private List<AnswerResultDTO> answerDetails;
-    private QuizDTO quizInfo;
+    private QuizBasicInfoDTO quizInfo;
 }

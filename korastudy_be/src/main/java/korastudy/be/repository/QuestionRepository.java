@@ -38,4 +38,6 @@ public interface QuestionRepository extends JpaRepository<Question, Long> {
     Integer findMaxOrderIndexByQuizId(@Param("quizId") Long quizId);
 
     List<Question> findByQuizIdOrderByOrderIndex(Long quizId);
+
+    List<Question> findByQuizId(Long id);
 }

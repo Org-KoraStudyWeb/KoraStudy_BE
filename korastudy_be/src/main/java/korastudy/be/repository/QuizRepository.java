@@ -22,6 +22,18 @@ public interface QuizRepository extends JpaRepository<Quiz, Long> {
     List<Quiz> findBySectionId(Long sectionId);
 
     /**
+     * 🆕 Tìm quiz đã publish và active theo section ID (cho student)
+     */
+    @Query("SELECT q FROM Quiz q WHERE q.section.id = :sectionId " + "AND q.isPublished = true AND q.isActive = true")
+    List<Quiz> findPublishedAndActiveBySectionId(@Param("sectionId") Long sectionId);
+
+    /**
+     * 🆕 Tìm tất cả quiz theo section ID với JOIN FETCH để tránh N+1
+     */
+    @Query("SELECT q FROM Quiz q LEFT JOIN FETCH q.section WHERE q.section.id = :sectionId")
+    List<Quiz> findBySectionIdWithSection(@Param("sectionId") Long sectionId);
+
+    /**
      * Tìm quiz theo section ID và quiz ID
      */
     Optional<Quiz> findBySectionIdAndId(Long sectionId, Long quizId);
@@ -32,9 +44,21 @@ public interface QuizRepository extends JpaRepository<Quiz, Long> {
     boolean existsBySectionId(Long sectionId);
 
     /**
+     * 🆕 Kiểm tra section có quiz published không
+     */
+    @Query("SELECT CASE WHEN COUNT(q) > 0 THEN true ELSE false END FROM Quiz q " + "WHERE q.section.id = :sectionId AND q.isPublished = true AND q.isActive = true")
+    boolean existsPublishedQuizBySectionId(@Param("sectionId") Long sectionId);
+
+    /**
      * Đếm số quiz trong section
      */
     long countBySectionId(Long sectionId);
+
+    /**
+     * 🆕 Đếm số quiz published trong section
+     */
+    @Query("SELECT COUNT(q) FROM Quiz q WHERE q.section.id = :sectionId " + "AND q.isPublished = true AND q.isActive = true")
+    long countPublishedQuizzesBySectionId(@Param("sectionId") Long sectionId);
 
     // ==================== QUERY PHỨC TẠP ====================
 

@@ -2,148 +2,197 @@ package korastudy.be.service;
 
 import korastudy.be.dto.request.quiz.*;
 import korastudy.be.dto.response.quiz.*;
-import korastudy.be.entity.Course.Question;
-import korastudy.be.entity.Course.Quiz;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 public interface IQuizService {
 
-    // ==================== QUIZ CRUD ====================
+    // ==================== QUIZ CRUD (TEACHER/ADMIN) ====================
 
     /**
-     * Tạo quiz mới cho một SECTION
-     * - Validate section có tồn tại không
-     * - Một section có thể có nhiều quiz
+     * Tạo mới quiz (Teacher/Admin)
      */
     QuizDTO createQuiz(QuizCreateRequest request);
 
     /**
-     * Cập nhật thông tin quiz (title, description, timeLimit, passingScore)
-     * - KHÔNG update questions qua API này (dùng API riêng cho questions)
+     * Cập nhật quiz (Teacher/Admin)
      */
     QuizDTO updateQuiz(Long quizId, QuizUpdateRequest request);
 
     /**
-     * Lấy chi tiết quiz theo ID (dành cho giáo viên/quản trị)
-     * - Bao gồm toàn bộ questions và correct answers
+     * Xóa quiz (Teacher/Admin)
      */
-    QuizDTO getQuizById(Long id);
+    void deleteQuiz(Long quizId);
 
     /**
-     * Lấy DANH SÁCH quiz theo SECTION ID
-     * - Một section có thể có nhiều quiz
+     * Publish/Unpublish quiz (Teacher/Admin)
      */
-    List<QuizDTO> getQuizzesBySectionId(Long sectionId);
+    void publishQuiz(Long quizId, boolean publish);
+
+    // ==================== QUIZ VIEW (TEACHER/ADMIN) ====================
 
     /**
-     * Lấy quiz cụ thể theo SECTION ID và QUIZ ID
+     * Lấy chi tiết quiz cho Teacher/Admin (có đáp án)
      */
-    QuizDTO getQuizBySectionAndId(Long sectionId, Long quizId);
+    QuizDTO getQuizForTeacher(Long quizId);
 
     /**
-     * Xóa quiz và tất cả questions, options liên quan
-     * - Cascade delete
+     * Lấy thông tin cơ bản quiz
      */
-    void deleteQuiz(Long id);
+    QuizBasicInfoDTO getQuizBasicInfo(Long quizId);
+
+    /**
+     * Lấy tóm tắt quiz
+     */
+    QuizSummaryDTO getQuizSummary(Long quizId);
+
+    /**
+     * Lấy danh sách quiz theo section (Teacher/Admin)
+     */
+    List<QuizSummaryDTO> getQuizzesBySectionId(Long sectionId);
+
+    /**
+     * Tìm kiếm quiz (Teacher/Admin)
+     */
+    List<QuizSummaryDTO> searchQuizzes(QuizSearchRequest request);
+
+    // ==================== QUIZ VIEW (STUDENT) ====================
+
+    /**
+     * Lấy quiz để làm bài cho Student (ẩn đáp án)
+     */
+    QuizDTO getQuizForStudent(Long quizId);
+
+    /**
+     * Lấy danh sách quiz có sẵn cho Student
+     */
+    List<QuizSummaryDTO> getAvailableQuizzesForStudent(Long sectionId, Long userId);
+
+    /**
+     * Lấy trạng thái quiz cho Student (đã làm chưa, điểm cao nhất, v.v.)
+     */
+    QuizStatusDTO getQuizStatusForStudent(Long quizId, Long userId);
 
     // ==================== QUESTION MANAGEMENT ====================
 
     /**
-     * Thêm câu hỏi mới vào quiz
-     * - Validate quiz tồn tại
-     * - Tạo question với các options
+     * Thêm câu hỏi vào quiz
      */
     QuestionDTO addQuestionToQuiz(Long quizId, QuestionCreateRequest request);
 
     /**
-     * Cập nhật câu hỏi và options
-     * - Có thể thay đổi loại câu hỏi (single/multiple choice)
+     * Cập nhật câu hỏi
      */
     QuestionDTO updateQuestion(Long questionId, QuestionUpdateRequest request);
 
     /**
-     * Xóa câu hỏi khỏi quiz
-     * - Tự động xóa options liên quan
+     * Xóa câu hỏi
      */
     void deleteQuestion(Long questionId);
 
     /**
-     * Lấy danh sách câu hỏi của quiz
-     * - Dành cho giáo viên chỉnh sửa
-     * - Bao gồm correct answers
+     * Lấy danh sách câu hỏi (Teacher view - có đáp án)
      */
-    List<QuestionDTO> getQuestionsByQuizId(Long quizId);
+    List<QuestionDTO> getQuestionsForTeacher(Long quizId);
+
+    /**
+     * Lấy danh sách câu hỏi (Student view - ẩn đáp án)
+     */
+    List<QuestionDTO> getQuestionsForStudent(Long quizId);
+
+    // ==================== OPTION MANAGEMENT ====================
+
+    /**
+     * Thêm option vào câu hỏi
+     */
+    OptionDTO addOptionToQuestion(Long questionId, OptionCreateRequest request);
+
+    /**
+     * Cập nhật option
+     */
+    OptionDTO updateOption(Long optionId, OptionUpdateRequest request);
+
+    /**
+     * Xóa option
+     */
+    void deleteOption(Long optionId);
+
+    /**
+     * Lấy danh sách option của câu hỏi
+     */
+    List<OptionDTO> getOptionsByQuestionId(Long questionId);
 
     // ==================== QUIZ TAKING & SUBMISSION ====================
 
     /**
-     * Lấy quiz để làm bài (dành cho học viên)
-     * - KHÔNG bao gồm correct answers
-     * - Chỉ hiển thị questions và options (không có isCorrect)
+     * Bắt đầu làm quiz (tạo TestResult record)
      */
-    QuizDTO getQuizForTaking(Long quizId);
+    TestResultDTO startQuiz(Long quizId, Long userId);
 
     /**
-     * Lấy DANH SÁCH quiz để làm bài theo SECTION ID
-     * - Tiện lợi cho frontend khi chỉ biết sectionId
+     * Nộp bài và chấm điểm
      */
-    List<QuizDTO> getQuizzesForTakingBySectionId(Long sectionId);
+    TestResultDTO submitQuiz(Long quizId, QuizSubmissionRequest request, Long userId);
 
     /**
-     * Lấy quiz MẶC ĐỊNH để làm bài theo SECTION ID
-     * - Trả về quiz đầu tiên hoặc quiz được đánh dấu là mặc định
+     * Lưu câu trả lời tạm thời (nếu cần resume)
      */
-    QuizDTO getDefaultQuizForTakingBySectionId(Long sectionId);
-
-    /**
-     * Nộp bài quiz và chấm điểm
-     * - Tính điểm tự động
-     * - Lưu kết quả vào TestResult
-     * - Validate thời gian làm bài
-     */
-    TestResultDTO submitQuiz(Long quizId, QuizSubmissionRequest request, String username);
+    void saveAnswer(Long quizId, AnswerRequest request, Long userId);
 
     // ==================== RESULTS & ANALYTICS ====================
 
     /**
-     * Lấy kết quả bài test theo ID
-     * - Hiển thị điểm số, thời gian làm bài
+     * Lấy kết quả bài làm theo ID
      */
     TestResultDTO getQuizResult(Long resultId);
 
     /**
-     * Lấy chi tiết kết quả bài test
-     * - Bao gồm từng câu hỏi, đáp án user chọn, đáp án đúng
-     * - Dành cho review sau khi làm bài
+     * Lấy chi tiết đầy đủ kết quả bài làm (bao gồm thông tin quiz)
      */
     QuizResultDetailDTO getQuizResultDetail(Long resultId);
 
     /**
-     * Lấy lịch sử làm bài của user
-     * - Hiển thị tất cả quiz user đã làm
+     * Lấy kết quả bài làm cho Student (Student view)
      */
-    List<TestResultDTO> getUserQuizResults(String username);
+    QuizResultDetailDTO getQuizResultForStudent(Long resultId, Long userId);
 
     /**
-     * Lấy kết quả của tất cả user cho một quiz
-     * - Dành cho giáo viên theo dõi
+     * Lấy kết quả bài làm cho Teacher (Teacher view - đầy đủ)
+     */
+    QuizResultDetailDTO getQuizResultForTeacher(Long resultId);
+
+    /**
+     * Lấy lịch sử làm bài của user
+     */
+    List<TestResultDTO> getUserQuizHistory(Long userId);
+
+    /**
+     * Lấy danh sách kết quả của một quiz
      */
     List<TestResultDTO> getQuizResults(Long quizId);
 
     /**
-     * Lấy thống kê chi tiết của quiz
-     * - Số người làm, điểm trung bình, tỷ lệ đỗ, v.v.
+     * Lấy tất cả kết quả của một quiz (Teacher view - chi tiết)
+     */
+    QuizAllResultsDTO getAllQuizResults(Long quizId);
+
+    /**
+     * Lấy thống kê quiz (Teacher view)
      */
     QuizStatisticsDTO getQuizStatistics(Long quizId);
 
     /**
-     * Lấy thống kê chi tiết của tất cả quiz trong section
-     * - Tiện lợi cho frontend khi chỉ biết sectionId
+     * Lấy thống kê của tất cả quiz trong section
      */
     List<QuizStatisticsDTO> getQuizStatisticsBySectionId(Long sectionId);
 
-    // ==================== VALIDATION METHODS ====================
+    // ==================== UTILITY METHODS ====================
+
+    /**
+     * Kiểm tra quiz có tồn tại không
+     */
+    boolean existsQuiz(Long quizId);
 
     /**
      * Kiểm tra section có quiz nào không
@@ -151,19 +200,17 @@ public interface IQuizService {
     boolean existsAnyQuizBySectionId(Long sectionId);
 
     /**
+     * Kiểm tra user có quyền truy cập quiz không
+     */
+    boolean canUserAccessQuiz(Long quizId, Long userId);
+
+    /**
      * Đếm số quiz trong section
      */
     long countQuizzesBySectionId(Long sectionId);
 
-    // ==================== UTILITY METHODS ====================
-
     /**
-     * Map Entity Quiz → DTO (cho internal use)
+     * Validate quiz trước khi làm bài
      */
-    QuizDTO mapToDTO(Quiz quiz);
-
-    /**
-     * Map Entity Question → DTO (cho internal use)
-     */
-    QuestionDTO mapToDTO(Question question);
+    void validateQuizForTaking(Long quizId, Long userId);
 }
