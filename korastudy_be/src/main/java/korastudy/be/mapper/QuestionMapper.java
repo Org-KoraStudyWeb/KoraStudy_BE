@@ -59,6 +59,7 @@ public class QuestionMapper {
                 .score(question.getScore())
                 .orderIndex(question.getOrderIndex())
                 .imageUrl(question.getImageUrl())
+                .explanation(question.getExplanation())
                 .showCorrectAnswer(false)  // Student không xem được đáp án
                 .options(options);
 
