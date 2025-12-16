@@ -533,6 +533,17 @@ public class QuizService implements IQuizService {
             throw new IllegalArgumentException("Quiz không khả dụng");
         }
 
+        // ============ VẤN ĐỀ: KHÔNG KIỂM TRA XEM ĐÃ CÓ TEST RESULT CHƯA HOÀN THÀNH ============
+        List<TestResult> existingResults = testResultRepository.findByUserIdAndQuizIdOrderByTakenDateDesc(userId, quizId);
+
+        // Nếu đã có test result chưa hoàn thành (chưa có score), trả về result đó
+        for (TestResult result : existingResults) {
+            if (result.getScore() == null || result.getScore() == 0) {
+                log.info("Tìm thấy test result đang làm dở: {}", result.getId());
+                return TestResultMapper.toDTO(result);
+            }
+        }
+
         // Tạo TestResult mới
         TestResult testResult = TestResult.builder().quiz(quiz).user(user).takenDate(LocalDateTime.now()).build();
 
@@ -556,11 +567,36 @@ public class QuizService implements IQuizService {
             throw new IllegalArgumentException("Quiz không khả dụng");
         }
 
+        // ============ VẤN ĐỀ 1: KHÔNG KIỂM TRA TEST RESULT ĐANG TỒN TẠI ============
+        // Nên kiểm tra xem user đã có test result nào đang IN_PROGRESS cho quiz này không
+        List<TestResult> existingResults = testResultRepository.findByUserIdAndQuizId(userId, quizId);
+
+        // Nếu có test result đang IN_PROGRESS, sử dụng nó thay vì tạo mới
+        TestResult testResultToUse = null;
+
+        for (TestResult result : existingResults) {
+            // Kiểm tra nếu result chưa có score (đang làm dở)
+            if (result.getScore() == null || result.getScore() == 0) {
+                testResultToUse = result;
+                log.info("Tìm thấy test result đang làm dở: {}", result.getId());
+                break;
+            }
+        }
+
         // Tính điểm
         QuizGradingResult gradingResult = calculateScore(quiz, request);
 
         // Lưu kết quả
-        TestResult testResult = saveTestResult(quiz, user, gradingResult, request.getTimeSpentInSeconds());
+        TestResult testResult = null;
+        if (testResultToUse != null) {
+            // Cập nhật test result hiện có
+            testResult = updateTestResult(testResultToUse, gradingResult, request.getTimeSpentInSeconds());
+            log.info("Cập nhật test result hiện có: {}", testResult.getId());
+        } else {
+            // Tạo test result mới
+            testResult = saveTestResult(quiz, user, gradingResult, request.getTimeSpentInSeconds());
+            log.info("Tạo test result mới: {}", testResult.getId());
+        }
 
         // Lưu chi tiết các câu trả lời
         saveQuizAnswers(testResult, request.getAnswers(), gradingResult);
@@ -568,6 +604,27 @@ public class QuizService implements IQuizService {
         log.info("Nộp bài thành công. Điểm: {}/{} ({}%)", gradingResult.getEarnedPoints(), gradingResult.getTotalPoints(), gradingResult.getTotalPoints() > 0 ? (gradingResult.getEarnedPoints() / gradingResult.getTotalPoints()) * 100 : 0);
 
         return TestResultMapper.toDTO(testResult);
+    }
+
+    private TestResult updateTestResult(TestResult testResult, QuizGradingResult gradingResult, Long timeSpent) {
+        double totalPoints = gradingResult.getTotalPoints();
+        double earnedPoints = gradingResult.getEarnedPoints();
+        double scorePercentage = totalPoints > 0 ? (earnedPoints / totalPoints) * 100 : 0;
+
+        // Đảm bảo timeSpent không null
+        Long actualTimeSpent = timeSpent != null ? timeSpent : 0L;
+
+        // Cập nhật thông tin
+        testResult.setScore(scorePercentage);
+        testResult.setTotalPoints(totalPoints);
+        testResult.setEarnedPoints(earnedPoints);
+        testResult.setCorrectAnswers(gradingResult.getCorrectAnswers());
+        testResult.setTotalQuestions(gradingResult.getTotalQuestions());
+        testResult.setTimeSpent(actualTimeSpent);
+        testResult.setTakenDate(LocalDateTime.now()); // Cập nhật thời gian nộp
+        testResult.setIsPassed(scorePercentage >= testResult.getQuiz().getPassingScore());
+
+        return testResultRepository.save(testResult);
     }
 
     // ==================== KẾT QUẢ ====================
