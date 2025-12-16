@@ -16,7 +16,7 @@ public class OptionMapper {
     public static OptionDTO toDTO(Option option) {
         if (option == null) return null;
 
-        return OptionDTO.builder().id(option.getId()).optionText(option.getOptionText()).isCorrect(option.getIsCorrect()).orderIndex(option.getOrderIndex()).build();
+        return OptionDTO.builder().id(option.getId()).optionText(option.getOptionText()).isCorrect(option.getIsCorrect()).orderIndex(option.getOrderIndex()).imageUrl(option.getImageUrl()).build();
     }
 
     /**
@@ -25,9 +25,7 @@ public class OptionMapper {
     public static OptionDTO toDTOForStudent(Option option) {
         if (option == null) return null;
 
-        return OptionDTO.builder().id(option.getId()).optionText(option.getOptionText())
-                // ⭐ KHÔNG set isCorrect cho student
-                .orderIndex(option.getOrderIndex()).build();
+        return OptionDTO.builder().id(option.getId()).optionText(option.getOptionText()).orderIndex(option.getOrderIndex()).imageUrl(option.getImageUrl()).build();
     }
 
     // ==================== LIST MAPPING ====================

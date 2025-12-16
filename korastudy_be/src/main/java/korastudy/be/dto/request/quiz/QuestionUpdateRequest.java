@@ -50,9 +50,6 @@ public class QuestionUpdateRequest {
             case FILL_IN_BLANK:
                 //  FILL_IN_BLANK cần ít nhất 1 option
                 return options != null && !options.isEmpty();
-            case ESSAY:
-                // ESSAY không cần options
-                return true;
             default:
                 return true;
         }
@@ -96,12 +93,4 @@ public class QuestionUpdateRequest {
         return true;
     }
 
-    // Validation cho ESSAY
-    @AssertTrue(message = "Câu hỏi ESSAY không được có options")
-    public boolean isEssayValid() {
-        if (questionType == QuestionType.ESSAY) {
-            return options == null || options.isEmpty();
-        }
-        return true;
-    }
 }

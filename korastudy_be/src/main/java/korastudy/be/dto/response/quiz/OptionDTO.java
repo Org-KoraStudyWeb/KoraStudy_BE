@@ -10,4 +10,5 @@ public class OptionDTO {
     private String optionText;
     private Boolean isCorrect;
     private Integer orderIndex;
+    private String imageUrl;
 }

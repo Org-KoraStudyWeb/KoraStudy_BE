@@ -30,45 +30,55 @@ public class QuizService implements IQuizService {
     private final TestResultRepository testResultRepository;
     private final QuizAnswerRepository quizAnswerRepository;
     private final UserRepository userRepository;
+    private final CloudinaryService cloudinaryService;
 
-    // ==================== QUIZ CRUD (ADMIN/TEACHER) ====================
+    // ==================== QUIZ QUẢN LÝ (ADMIN) ====================
 
     @Override
     @Transactional
     public QuizDTO createQuiz(QuizCreateRequest request) {
-        log.info("Creating quiz for section ID: {}", request.getSectionId());
+        log.info("Tạo quiz mới cho section ID: {}", request.getSectionId());
 
+        // Tìm section
         Section section = sectionRepository.findById(request.getSectionId()).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy section với ID: " + request.getSectionId()));
 
-        Quiz quiz = Quiz.builder().title(request.getTitle()).description(request.getDescription()).timeLimit(request.getTimeLimit()).passingScore(request.getPassingScore()).isPublished(request.getIsPublished()).isActive(request.getIsActive()).section(section).build();
+        // Tạo quiz mới
+        Quiz quiz = Quiz.builder().title(request.getTitle()).description(request.getDescription()).timeLimit(request.getTimeLimit()).passingScore(request.getPassingScore()).isPublished(request.getIsPublished()).isActive(true) // Mặc định là active
+                .section(section).build();
 
         Quiz savedQuiz = quizRepository.save(quiz);
 
+        // Tạo câu hỏi nếu có trong request
         if (request.getQuestions() != null && !request.getQuestions().isEmpty()) {
             List<Question> questions = createQuestionsForQuiz(savedQuiz, request.getQuestions());
             savedQuiz.setQuestions(questions);
         }
 
-        log.info("Quiz created successfully for section {} with ID: {}", request.getSectionId(), savedQuiz.getId());
+        log.info("Tạo quiz thành công cho section {} với ID: {}", request.getSectionId(), savedQuiz.getId());
         return QuizAdminMapper.toQuizDTO(savedQuiz);
     }
 
     @Override
     @Transactional
     public QuizDTO updateQuiz(Long quizId, QuizUpdateRequest request) {
-        log.info("Updating quiz ID: {}", quizId);
+        log.info("Cập nhật quiz ID: {}", quizId);
 
         Quiz quiz = quizRepository.findById(quizId).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy quiz với ID: " + quizId));
 
+        // Cập nhật thông tin
         quiz.setTitle(request.getTitle());
         quiz.setDescription(request.getDescription());
         quiz.setTimeLimit(request.getTimeLimit());
         quiz.setPassingScore(request.getPassingScore());
         quiz.setIsPublished(request.getIsPublished());
-        quiz.setIsActive(request.getIsActive() != null ? request.getIsActive() : quiz.getIsActive());
+
+        // Giữ isActive nếu không cung cấp
+        if (request.getIsActive() != null) {
+            quiz.setIsActive(request.getIsActive());
+        }
 
         Quiz updatedQuiz = quizRepository.save(quiz);
-        log.info("Quiz updated successfully: {}", quizId);
+        log.info("Cập nhật quiz thành công: {}", quizId);
 
         return QuizAdminMapper.toQuizDTO(updatedQuiz);
     }
@@ -78,9 +88,44 @@ public class QuizService implements IQuizService {
     public void deleteQuiz(Long quizId) {
         Quiz quiz = quizRepository.findById(quizId).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy quiz với ID: " + quizId));
 
+        // ============ THÊM PHẦN XÓA ẢNH CỦA TẤT CẢ CÂU HỎI ============
+        // Lấy tất cả câu hỏi của quiz
+        List<Question> questions = questionRepository.findByQuizId(quizId);
+
+        for (Question question : questions) {
+            // Xóa ảnh câu hỏi
+            if (question.getImageUrl() != null && !question.getImageUrl().isEmpty()) {
+                try {
+                    cloudinaryService.deleteFile(question.getImageUrl());
+                    log.info("Đã xóa ảnh câu hỏi: {}", question.getImageUrl());
+                } catch (Exception e) {
+                    log.warn("Không thể xóa ảnh câu hỏi: {}", question.getImageUrl(), e);
+                }
+            }
+
+            // Xóa ảnh của các options
+            if (question.getOptions() != null) {
+                for (Option option : question.getOptions()) {
+                    if (option.getImageUrl() != null && !option.getImageUrl().isEmpty()) {
+                        try {
+                            cloudinaryService.deleteFile(option.getImageUrl());
+                            log.info("Đã xóa ảnh option: {}", option.getImageUrl());
+                        } catch (Exception e) {
+                            log.warn("Không thể xóa ảnh option: {}", option.getImageUrl(), e);
+                        }
+                    }
+                }
+            }
+        }
+        // ============================================================
+
+        // Xóa tất cả câu hỏi trước
         questionRepository.deleteByQuizId(quizId);
+
+        // Xóa quiz
         quizRepository.delete(quiz);
-        log.info("Quiz deleted successfully: {}", quizId);
+
+        log.info("Xóa quiz thành công: {}", quizId);
     }
 
     @Override
@@ -90,56 +135,26 @@ public class QuizService implements IQuizService {
 
         quiz.setIsPublished(publish);
         quizRepository.save(quiz);
-        log.info("Quiz {} {}", quizId, publish ? "published" : "unpublished");
+
+        log.info("Quiz {} {}", quizId, publish ? "đã bật hiển thị" : "đã tắt hiển thị");
     }
 
-    // ==================== QUIZ VIEW (ADMIN/TEACHER) ====================
+    // ==================== XEM QUIZ ====================
 
     @Override
     @Transactional(readOnly = true)
     public QuizDTO getQuizForTeacher(Long quizId) {
         Quiz quiz = quizRepository.findById(quizId).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy quiz với ID: " + quizId));
+
         return QuizAdminMapper.toQuizDTO(quiz);
     }
-
-    @Override
-    @Transactional(readOnly = true)
-    public QuizBasicInfoDTO getQuizBasicInfo(Long quizId) {
-        Quiz quiz = quizRepository.findById(quizId).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy quiz với ID: " + quizId));
-        return QuizAdminMapper.toBasicInfoDTO(quiz);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public QuizSummaryDTO getQuizSummary(Long quizId) {
-        Quiz quiz = quizRepository.findById(quizId).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy quiz với ID: " + quizId));
-        return QuizAdminMapper.toSummaryDTO(quiz);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<QuizSummaryDTO> getQuizzesBySectionId(Long sectionId) {
-        List<Quiz> quizzes = quizRepository.findBySectionId(sectionId);
-        return QuizAdminMapper.toSummaryDTOs(quizzes);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<QuizSummaryDTO> searchQuizzes(QuizSearchRequest request) {
-        List<Quiz> quizzes = quizRepository.findAll();
-
-        List<Quiz> filteredQuizzes = quizzes.stream().filter(quiz -> request.getSectionId() == null || quiz.getSection().getId().equals(request.getSectionId())).filter(quiz -> request.getTitle() == null || request.getTitle().isEmpty() || quiz.getTitle().toLowerCase().contains(request.getTitle().toLowerCase())).filter(quiz -> request.getIsPublished() == null || quiz.getIsPublished().equals(request.getIsPublished())).filter(quiz -> request.getIsActive() == null || quiz.getIsActive().equals(request.getIsActive())).skip((long) request.getPage() * request.getSize()).limit(request.getSize()).collect(Collectors.toList());
-
-        return QuizAdminMapper.toSummaryDTOs(filteredQuizzes);
-    }
-
-    // ==================== QUIZ VIEW (STUDENT) ====================
 
     @Override
     @Transactional(readOnly = true)
     public QuizDTO getQuizForStudent(Long quizId) {
         Quiz quiz = quizRepository.findById(quizId).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy quiz với ID: " + quizId));
 
+        // Kiểm tra quiz có khả dụng không
         if (!quiz.getIsPublished() || !quiz.getIsActive()) {
             throw new IllegalArgumentException("Quiz không khả dụng để làm bài");
         }
@@ -150,46 +165,17 @@ public class QuizService implements IQuizService {
     @Override
     @Transactional(readOnly = true)
     public List<QuizSummaryDTO> getAvailableQuizzesForStudent(Long sectionId, Long userId) {
-        log.info(" [QUIZ] Finding quizzes for sectionId: {}, userId: {}", sectionId, userId);
+        log.info("Tìm quiz cho học sinh - sectionId: {}, userId: {}", sectionId, userId);
 
+        // Lấy tất cả quiz trong section
         List<Quiz> quizzes = quizRepository.findBySectionId(sectionId);
-        log.info(" [QUIZ] Found {} quizzes from database", quizzes.size());
+        log.info("Tìm thấy {} quiz trong database", quizzes.size());
 
-        // Log chi tiết từng quiz
-        for (Quiz quiz : quizzes) {
-            log.info(" Quiz ID: {}, Title: {}, isPublished: {}, isActive: {}", quiz.getId(), quiz.getTitle(), quiz.getIsPublished(), quiz.getIsActive());
-        }
+        // Lọc chỉ lấy quiz đã publish và active
+        List<QuizSummaryDTO> result = quizzes.stream().filter(quiz -> Boolean.TRUE.equals(quiz.getIsPublished()) && Boolean.TRUE.equals(quiz.getIsActive())).map(QuizStudentMapper::toSummaryDTO).collect(Collectors.toList());
 
-        //  DÙNG method helper để tránh NullPointerException
-        List<QuizSummaryDTO> result = quizzes.stream().filter(quiz -> {
-            boolean pass = isQuizAvailableForStudent(quiz);  // Dùng method helper
-            if (!pass) {
-                log.warn(" Quiz {} filtered out - isPublished: {}, isActive: {}", quiz.getId(), quiz.getIsPublished(), quiz.getIsActive());
-            }
-            return pass;
-        }).map(QuizStudentMapper::toSummaryDTO).collect(Collectors.toList());
-
-        log.info(" [QUIZ] Returning {} available quizzes after filtering", result.size());
+        log.info("Trả về {} quiz khả dụng sau khi lọc", result.size());
         return result;
-    }
-
-    // Method helper xử lý null safety
-    private boolean isQuizAvailableForStudent(Quiz quiz) {
-        if (quiz == null) {
-            log.warn(" Quiz is null");
-            return false;
-        }
-
-        Boolean isPublished = quiz.getIsPublished();
-        Boolean isActive = quiz.getIsActive();
-
-        // Handle null values - treat null as false
-        boolean published = Boolean.TRUE.equals(isPublished);
-        boolean active = Boolean.TRUE.equals(isActive);
-
-        log.debug(" Quiz {} - published: {}, active: {}", quiz.getId(), published, active);
-
-        return published && active;
     }
 
     @Override
@@ -197,18 +183,17 @@ public class QuizService implements IQuizService {
     public QuizStatusDTO getQuizStatusForStudent(Long quizId, Long userId) {
         Quiz quiz = quizRepository.findById(quizId).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy quiz với ID: " + quizId));
 
+        // Lấy lịch sử làm bài của user
         List<TestResult> userResults = testResultRepository.findByUserIdAndQuizIdOrderByTakenDateDesc(userId, quizId);
 
+        // Tạo DTO trạng thái
         QuizStatusDTO status = QuizStudentMapper.toStatusDTO(quiz);
 
         if (!userResults.isEmpty()) {
             TestResult latestResult = userResults.get(0);
             status.setIsCompleted(true);
             status.setAttemptCount(userResults.size());
-
-            Optional<TestResult> bestResult = userResults.stream().max(Comparator.comparing(TestResult::getScore));
-            status.setBestScore(bestResult.map(TestResult::getScore).orElse(0.0));
-
+            status.setBestScore(latestResult.getScore());
             status.setIsPassed(latestResult.getIsPassed());
             status.setLastAttemptDate(latestResult.getTakenDate());
         } else {
@@ -222,30 +207,55 @@ public class QuizService implements IQuizService {
         return status;
     }
 
-    // ==================== QUESTION MANAGEMENT ====================
+    @Override
+    @Transactional(readOnly = true)
+    public List<QuizSummaryDTO> getQuizzesBySectionId(Long sectionId) {
+        List<Quiz> quizzes = quizRepository.findBySectionId(sectionId);
+        return QuizAdminMapper.toSummaryDTOs(quizzes);
+    }
+
+    // ==================== QUẢN LÝ CÂU HỎI ====================
 
     @Override
     @Transactional
     public QuestionDTO addQuestionToQuiz(Long quizId, QuestionCreateRequest request) {
         Quiz quiz = quizRepository.findById(quizId).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy quiz với ID: " + quizId));
 
+        // Xác định thứ tự câu hỏi
         Integer orderIndex = request.getOrderIndex();
         if (orderIndex == null) {
             Integer maxOrder = questionRepository.findMaxOrderIndexByQuizId(quizId);
             orderIndex = maxOrder != null ? maxOrder + 1 : 1;
         }
 
-        Question question = Question.builder().questionText(request.getQuestionText()).questionType(request.getQuestionType()).score(request.getScore()).orderIndex(orderIndex).imageUrl(request.getImageUrl()).explanation(request.getExplanation()).quiz(quiz).build();
+        // ============ THÊM VALIDATION CHO ẢNH ============
+        // Kiểm tra URL ảnh hợp lệ (nếu có)
+        if (request.getImageUrl() != null && !request.getImageUrl().isEmpty()) {
+            validateImageUrl(request.getImageUrl(), "imageUrl của câu hỏi");
+        }
+        // ===============================================
+
+        // Tạo câu hỏi
+        Question question = Question.builder().questionText(request.getQuestionText()).questionType(request.getQuestionType()).score(request.getScore()).orderIndex(orderIndex).imageUrl(request.getImageUrl()) // URL từ frontend upload
+                .explanation(request.getExplanation()).quiz(quiz).build();
 
         Question savedQuestion = questionRepository.save(question);
 
-        // Với FILL_IN_BLANK, vẫn tạo options (tất cả đều isCorrect = true)
+        // Tạo options nếu có
         if (request.getOptions() != null && !request.getOptions().isEmpty()) {
+            // ============ THÊM VALIDATION CHO ẢNH OPTIONS ============
+            for (OptionCreateRequest optionRequest : request.getOptions()) {
+                if (optionRequest.getImageUrl() != null && !optionRequest.getImageUrl().isEmpty()) {
+                    validateImageUrl(optionRequest.getImageUrl(), "imageUrl của đáp án");
+                }
+            }
+            // ========================================================
+
             List<Option> options = createOptionsForQuestion(savedQuestion, request.getOptions());
             savedQuestion.setOptions(options);
         }
 
-        log.info("Question added to quiz {}: {}", quizId, savedQuestion.getId());
+        log.info("Đã thêm câu hỏi vào quiz {}: {}", quizId, savedQuestion.getId());
         return QuestionMapper.toDTOForTeacher(savedQuestion);
     }
 
@@ -254,18 +264,63 @@ public class QuizService implements IQuizService {
     public QuestionDTO updateQuestion(Long questionId, QuestionUpdateRequest request) {
         Question question = questionRepository.findById(questionId).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy câu hỏi với ID: " + questionId));
 
+        // ============ THÊM PHẦN XỬ LÝ ẢNH ============
+        String oldImageUrl = question.getImageUrl();
+        String newImageUrl = request.getImageUrl();
+
+        // Xóa ảnh cũ nếu có thay đổi và ảnh cũ tồn tại
+        // BUG FIX: Chỉ xóa nếu newImageUrl null HOẶC khác oldImageUrl, VÀ oldImageUrl không null
+        if (oldImageUrl != null && (newImageUrl == null || !oldImageUrl.equals(newImageUrl))) {
+            try {
+                cloudinaryService.deleteFile(oldImageUrl);
+                log.info("Đã xóa ảnh cũ của câu hỏi: {}", oldImageUrl);
+            } catch (Exception e) {
+                log.warn("Không thể xóa ảnh cũ: {}", oldImageUrl, e);
+                // Không throw exception để tránh ảnh hưởng đến update
+            }
+        }
+        // ============================================
+
+        // ============ THÊM VALIDATION CHO ẢNH MỚI ============
+        if (newImageUrl != null && !newImageUrl.isEmpty()) {
+            validateImageUrl(newImageUrl, "imageUrl của câu hỏi");
+        }
+        // ===================================================
+
+        // Cập nhật thông tin cơ bản
         question.setQuestionText(request.getQuestionText());
         question.setQuestionType(request.getQuestionType());
         question.setScore(request.getScore());
         question.setOrderIndex(request.getOrderIndex());
-        question.setImageUrl(request.getImageUrl());
+        question.setImageUrl(request.getImageUrl()); // URL từ upload service
         question.setExplanation(request.getExplanation());
 
-        // Xóa options cũ và tạo mới
+        // Lưu câu hỏi đã được cập nhật trước
+        Question updatedQuestion = questionRepository.save(question);
+
+        // ============ THÊM XỬ LÝ XÓA ẢNH CỦA OPTIONS CŨ ============
+        // Lấy options cũ trước khi xóa (cần lấy trước khi deleteByQuestionId)
+        List<Option> oldOptions = optionRepository.findByQuestionId(questionId);
+
+        // Xóa ảnh của tất cả options cũ
+        for (Option oldOption : oldOptions) {
+            if (oldOption.getImageUrl() != null && !oldOption.getImageUrl().isEmpty()) {
+                try {
+                    cloudinaryService.deleteFile(oldOption.getImageUrl());
+                    log.info("Đã xóa ảnh cũ của option: {}", oldOption.getImageUrl());
+                } catch (Exception e) {
+                    log.warn("Không thể xóa ảnh option cũ: {}", oldOption.getImageUrl(), e);
+                }
+            }
+        }
+        // =========================================================
+
+        // Xóa options cũ từ database
         optionRepository.deleteByQuestionId(questionId);
 
+        // Tạo options mới nếu có
         if (request.getOptions() != null && !request.getOptions().isEmpty()) {
-            //  Validate options trước khi tạo
+            // Validate options theo loại câu hỏi
             validateQuestionOptionsBasedOnType(request.getQuestionType(), request.getOptions().stream().map(opt -> {
                 OptionCreateRequest createRequest = new OptionCreateRequest();
                 createRequest.setOptionText(opt.getOptionText());
@@ -274,28 +329,63 @@ public class QuizService implements IQuizService {
                 return createRequest;
             }).collect(Collectors.toList()));
 
-            // Tự động set isCorrect = true cho FILL_IN_BLANK
+            // Với FILL_IN_BLANK, tất cả option đều là đáp án đúng
             if (request.getQuestionType() == QuestionType.FILL_IN_BLANK) {
                 request.getOptions().forEach(opt -> opt.setIsCorrect(true));
             }
 
-            List<Option> newOptions = createOptionsForQuestion(question, request.getOptions());
-            question.setOptions(newOptions);
+            // ============ THÊM VALIDATION CHO ẢNH OPTIONS MỚI ============
+            for (OptionUpdateRequest optionRequest : request.getOptions()) {
+                if (optionRequest.getImageUrl() != null && !optionRequest.getImageUrl().isEmpty()) {
+                    validateImageUrl(optionRequest.getImageUrl(), "imageUrl của đáp án");
+                }
+            }
+            // ============================================================
+
+            List<Option> newOptions = createOptionsForQuestion(updatedQuestion, request.getOptions());
+            updatedQuestion.setOptions(newOptions);
         }
 
-        Question updatedQuestion = questionRepository.save(question);
-        log.info("Question updated: {}", questionId);
+        log.info("Cập nhật câu hỏi thành công: {}", questionId);
+
         return QuestionMapper.toDTOForTeacher(updatedQuestion);
     }
 
     @Override
     @Transactional
     public void deleteQuestion(Long questionId) {
-        if (!questionRepository.existsById(questionId)) {
-            throw new ResourceNotFoundException("Không tìm thấy câu hỏi với ID: " + questionId);
+        // Tìm câu hỏi trước
+        Question question = questionRepository.findById(questionId).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy câu hỏi với ID: " + questionId));
+
+        // ============ THÊM PHẦN XÓA ẢNH ============
+        // Xóa ảnh câu hỏi nếu có
+        if (question.getImageUrl() != null && !question.getImageUrl().isEmpty()) {
+            try {
+                cloudinaryService.deleteFile(question.getImageUrl());
+                log.info("Đã xóa ảnh câu hỏi: {}", question.getImageUrl());
+            } catch (Exception e) {
+                log.warn("Không thể xóa ảnh câu hỏi: {}", question.getImageUrl(), e);
+            }
         }
+
+        // Xóa ảnh của tất cả options
+        if (question.getOptions() != null) {
+            for (Option option : question.getOptions()) {
+                if (option.getImageUrl() != null && !option.getImageUrl().isEmpty()) {
+                    try {
+                        cloudinaryService.deleteFile(option.getImageUrl());
+                        log.info("Đã xóa ảnh option: {}", option.getImageUrl());
+                    } catch (Exception e) {
+                        log.warn("Không thể xóa ảnh option: {}", option.getImageUrl(), e);
+                    }
+                }
+            }
+        }
+        // ============================================
+
+        // Xóa câu hỏi từ database
         questionRepository.deleteById(questionId);
-        log.info("Question deleted: {}", questionId);
+        log.info("Xóa câu hỏi thành công: {}", questionId);
     }
 
     @Override
@@ -312,22 +402,20 @@ public class QuizService implements IQuizService {
         return QuestionMapper.toDTOsForStudent(questions);
     }
 
-    // ==================== OPTION MANAGEMENT ====================
-
     @Override
     @Transactional
     public OptionDTO addOptionToQuestion(Long questionId, OptionCreateRequest request) {
-        log.info("Adding option to question ID: {}", questionId);
+        log.info("Thêm đáp án vào câu hỏi ID: {}", questionId);
 
         Question question = questionRepository.findById(questionId).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy câu hỏi với ID: " + questionId));
 
-        // Cho phép FILL_IN_BLANK thêm option
-        // Chỉ không cho phép ESSAY
-        if (question.getQuestionType() == QuestionType.ESSAY) {
-            throw new IllegalArgumentException("Câu hỏi loại ESSAY không thể thêm option");
+        // ============ THÊM VALIDATION CHO ẢNH ============
+        if (request.getImageUrl() != null && !request.getImageUrl().isEmpty()) {
+            validateImageUrl(request.getImageUrl(), "imageUrl của đáp án");
         }
+        // ===============================================
 
-        // Với FILL_IN_BLANK, option phải luôn isCorrect = true
+        // Với FILL_IN_BLANK, đáp án phải luôn là đúng
         if (question.getQuestionType() == QuestionType.FILL_IN_BLANK && !request.getIsCorrect()) {
             throw new IllegalArgumentException("Câu hỏi FILL_IN_BLANK chỉ có đáp án đúng, không có đáp án sai");
         }
@@ -335,16 +423,18 @@ public class QuizService implements IQuizService {
         // Kiểm tra số lượng option hiện có
         List<Option> existingOptions = optionRepository.findByQuestionId(questionId);
         if (question.getQuestionType() == QuestionType.TRUE_FALSE && existingOptions.size() >= 2) {
-            throw new IllegalArgumentException("Câu hỏi TRUE/FALSE chỉ được có tối đa 2 option");
+            throw new IllegalArgumentException("Câu hỏi TRUE/FALSE chỉ được có tối đa 2 đáp án");
         }
 
+        // Xác định thứ tự
         Integer maxOrder = optionRepository.findMaxOrderIndexByQuestionId(questionId);
         Integer orderIndex = maxOrder != null ? maxOrder + 1 : 1;
 
-        Option option = Option.builder().optionText(request.getOptionText()).isCorrect(request.getIsCorrect()).imageUrl(request.getImageUrl()).orderIndex(orderIndex).question(question).build();
+        Option option = Option.builder().optionText(request.getOptionText()).isCorrect(request.getIsCorrect()).imageUrl(request.getImageUrl()) // URL từ frontend upload
+                .orderIndex(orderIndex).question(question).build();
 
         Option savedOption = optionRepository.save(option);
-        log.info("Option added successfully to question {}: {}", questionId, savedOption.getId());
+        log.info("Thêm đáp án thành công vào câu hỏi {}: {}", questionId, savedOption.getId());
 
         return OptionMapper.toDTO(savedOption);
     }
@@ -352,16 +442,42 @@ public class QuizService implements IQuizService {
     @Override
     @Transactional
     public OptionDTO updateOption(Long optionId, OptionUpdateRequest request) {
-        log.info("Updating option ID: {}", optionId);
+        log.info("Cập nhật đáp án ID: {}", optionId);
 
-        Option option = optionRepository.findById(optionId).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy option với ID: " + optionId));
+        Option option = optionRepository.findById(optionId).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đáp án với ID: " + optionId));
+
+        // ============ THÊM PHẦN XỬ LÝ ẢNH ============
+        String oldImageUrl = option.getImageUrl();
+        String newImageUrl = request.getImageUrl();
+
+        // Xóa ảnh cũ nếu có thay đổi và ảnh cũ tồn tại
+        if (oldImageUrl != null && (newImageUrl == null || !oldImageUrl.equals(newImageUrl))) {
+            try {
+                cloudinaryService.deleteFile(oldImageUrl);
+                log.info("Đã xóa ảnh cũ của option: {}", oldImageUrl);
+            } catch (Exception e) {
+                log.warn("Không thể xóa ảnh option cũ: {}", oldImageUrl, e);
+            }
+        }
+        // ============================================
+
+        // ============ THÊM VALIDATION CHO ẢNH MỚI ============
+        if (newImageUrl != null && !newImageUrl.isEmpty()) {
+            validateImageUrl(newImageUrl, "imageUrl của đáp án");
+        }
+        // ===================================================
+
+        // Với FILL_IN_BLANK, không cho phép chuyển thành đáp án sai
+        if (option.getQuestion().getQuestionType() == QuestionType.FILL_IN_BLANK && !request.getIsCorrect()) {
+            throw new IllegalArgumentException("Câu hỏi FILL_IN_BLANK chỉ có đáp án đúng, không có đáp án sai");
+        }
 
         option.setOptionText(request.getOptionText());
         option.setIsCorrect(request.getIsCorrect());
         option.setImageUrl(request.getImageUrl());
 
         Option updatedOption = optionRepository.save(option);
-        log.info("Option updated successfully: {}", optionId);
+        log.info("Cập nhật đáp án thành công: {}", optionId);
 
         return OptionMapper.toDTO(updatedOption);
     }
@@ -369,23 +485,31 @@ public class QuizService implements IQuizService {
     @Override
     @Transactional
     public void deleteOption(Long optionId) {
-        if (!optionRepository.existsById(optionId)) {
-            throw new ResourceNotFoundException("Không tìm thấy option với ID: " + optionId);
+        // Tìm option trước
+        Option option = optionRepository.findById(optionId).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đáp án với ID: " + optionId));
+
+        // ============ THÊM PHẦN XÓA ẢNH ============
+        // Xóa ảnh option nếu có
+        if (option.getImageUrl() != null && !option.getImageUrl().isEmpty()) {
+            try {
+                cloudinaryService.deleteFile(option.getImageUrl());
+                log.info("Đã xóa ảnh option: {}", option.getImageUrl());
+            } catch (Exception e) {
+                log.warn("Không thể xóa ảnh option: {}", option.getImageUrl(), e);
+            }
         }
+        // ============================================
 
-        Option option = optionRepository.findById(optionId).get();
-
-        // Với FILL_IN_BLANK, vẫn cho phép xóa option
-        // Chỉ kiểm tra TRUE_FALSE
+        // Với TRUE_FALSE, đảm bảo còn ít nhất 2 đáp án
         if (option.getQuestion().getQuestionType() == QuestionType.TRUE_FALSE) {
             long remainingOptions = optionRepository.countByQuestionId(option.getQuestion().getId()) - 1;
             if (remainingOptions < 2) {
-                throw new IllegalArgumentException("Câu hỏi TRUE/FALSE phải có ít nhất 2 option");
+                throw new IllegalArgumentException("Câu hỏi TRUE/FALSE phải có ít nhất 2 đáp án");
             }
         }
 
         optionRepository.deleteById(optionId);
-        log.info("Option deleted successfully: {}", optionId);
+        log.info("Xóa đáp án thành công: {}", optionId);
     }
 
     @Override
@@ -395,30 +519,7 @@ public class QuizService implements IQuizService {
         return OptionMapper.toDTOs(options);
     }
 
-    // Thêm phương thức helper để validate option đúng
-    private void validateQuestionOptions(Question question, List<?> optionRequests) {
-        if (optionRequests == null) return;
-
-        long correctCount = optionRequests.stream().filter(req -> {
-            if (req instanceof OptionCreateRequest) {
-                return ((OptionCreateRequest) req).getIsCorrect();
-            } else if (req instanceof OptionUpdateRequest) {
-                return ((OptionUpdateRequest) req).getIsCorrect();
-            }
-            return false;
-        }).count();
-
-        // Validate SINGLE_CHOICE phải có đúng 1 đáp án đúng
-        if (question.getQuestionType() == QuestionType.SINGLE_CHOICE && correctCount != 1) {
-            throw new IllegalArgumentException("Câu hỏi SINGLE_CHOICE phải có đúng 1 đáp án đúng");
-        }
-
-        // Validate MULTIPLE_CHOICE phải có ít nhất 1 đáp án đúng
-        if (question.getQuestionType() == QuestionType.MULTIPLE_CHOICE && correctCount < 1) {
-            throw new IllegalArgumentException("Câu hỏi MULTIPLE_CHOICE phải có ít nhất 1 đáp án đúng");
-        }
-    }
-    // ==================== QUIZ TAKING & SUBMISSION ====================
+    // ==================== LÀM BÀI THI ====================
 
     @Override
     @Transactional
@@ -427,14 +528,16 @@ public class QuizService implements IQuizService {
 
         User user = userRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy user với ID: " + userId));
 
+        // Kiểm tra quiz có khả dụng không
         if (!quiz.getIsPublished() || !quiz.getIsActive()) {
             throw new IllegalArgumentException("Quiz không khả dụng");
         }
 
+        // Tạo TestResult mới
         TestResult testResult = TestResult.builder().quiz(quiz).user(user).takenDate(LocalDateTime.now()).build();
 
         TestResult savedResult = testResultRepository.save(testResult);
-        log.info("Quiz started for user {}: result ID {}", userId, savedResult.getId());
+        log.info("Bắt đầu quiz cho user {}: result ID {}", userId, savedResult.getId());
 
         return TestResultMapper.toDTO(savedResult);
     }
@@ -442,42 +545,52 @@ public class QuizService implements IQuizService {
     @Override
     @Transactional
     public TestResultDTO submitQuiz(Long quizId, QuizSubmissionRequest request, Long userId) {
-        log.info("Submitting quiz {} for user: {}", quizId, userId);
+        log.info("Nộp bài quiz {} cho user: {}", quizId, userId);
 
         User user = userRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy user với ID: " + userId));
 
         Quiz quiz = quizRepository.findById(quizId).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy quiz với ID: " + quizId));
 
+        // Kiểm tra quiz có khả dụng không
         if (!quiz.getIsPublished() || !quiz.getIsActive()) {
             throw new IllegalArgumentException("Quiz không khả dụng");
         }
 
+        // Tính điểm
         QuizGradingResult gradingResult = calculateScore(quiz, request);
+
+        // Lưu kết quả
         TestResult testResult = saveTestResult(quiz, user, gradingResult, request.getTimeSpentInSeconds());
+
+        // Lưu chi tiết các câu trả lời
         saveQuizAnswers(testResult, request.getAnswers(), gradingResult);
 
-        log.info("Quiz submitted successfully. Score: {}/{}", gradingResult.getEarnedPoints(), gradingResult.getTotalPoints());
+        log.info("Nộp bài thành công. Điểm: {}/{} ({}%)", gradingResult.getEarnedPoints(), gradingResult.getTotalPoints(), gradingResult.getTotalPoints() > 0 ? (gradingResult.getEarnedPoints() / gradingResult.getTotalPoints()) * 100 : 0);
 
         return TestResultMapper.toDTO(testResult);
     }
 
-    @Override
-    @Transactional
-    public void saveAnswer(Long quizId, AnswerRequest request, Long userId) {
-        log.debug("Saving temporary answer for user {} to question {}", userId, request.getQuestionId());
-    }
+    // ==================== KẾT QUẢ ====================
 
-    // ==================== RESULTS & ANALYTICS ====================
+    @Override
+    @Transactional(readOnly = true)
+    public TestResultDTO getQuizResult(Long resultId) {
+        TestResult testResult = testResultRepository.findById(resultId).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy kết quả với ID: " + resultId));
+
+        return TestResultMapper.toDTO(testResult);
+    }
 
     @Override
     @Transactional(readOnly = true)
     public QuizResultDetailDTO getQuizResultForStudent(Long resultId, Long userId) {
         TestResult testResult = testResultRepository.findById(resultId).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy kết quả với ID: " + resultId));
 
+        // Kiểm tra quyền xem
         if (!testResult.getUser().getId().equals(userId)) {
             throw new IllegalArgumentException("Bạn không có quyền xem kết quả này");
         }
 
+        // Lấy chi tiết các câu trả lời
         List<QuizAnswer> quizAnswers = quizAnswerRepository.findByTestResultId(resultId);
 
         TestResultDTO testResultDTO = TestResultMapper.toDTO(testResult);
@@ -486,6 +599,7 @@ public class QuizService implements IQuizService {
 
         testResultDTO.setAnswerDetails(answerDetails);
 
+        // Thông tin quiz
         QuizBasicInfoDTO quizInfo = QuizStudentMapper.toBasicInfoDTO(testResult.getQuiz());
 
         return QuizResultDetailDTO.builder().summary(testResultDTO).answerDetails(answerDetails).quizInfo(quizInfo).build();
@@ -496,6 +610,7 @@ public class QuizService implements IQuizService {
     public QuizResultDetailDTO getQuizResultForTeacher(Long resultId) {
         TestResult testResult = testResultRepository.findById(resultId).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy kết quả với ID: " + resultId));
 
+        // Lấy chi tiết các câu trả lời
         List<QuizAnswer> quizAnswers = quizAnswerRepository.findByTestResultId(resultId);
 
         TestResultDTO testResultDTO = TestResultMapper.toDTO(testResult);
@@ -504,6 +619,7 @@ public class QuizService implements IQuizService {
 
         testResultDTO.setAnswerDetails(answerDetails);
 
+        // Thông tin quiz
         QuizBasicInfoDTO quizInfo = QuizAdminMapper.toBasicInfoDTO(testResult.getQuiz());
 
         return QuizResultDetailDTO.builder().summary(testResultDTO).answerDetails(answerDetails).quizInfo(quizInfo).build();
@@ -518,14 +634,9 @@ public class QuizService implements IQuizService {
 
     @Override
     @Transactional(readOnly = true)
-    public QuizAllResultsDTO getAllQuizResults(Long quizId) {
-        Quiz quiz = quizRepository.findById(quizId).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy quiz với ID: " + quizId));
-
+    public List<TestResultDTO> getQuizResults(Long quizId) {
         List<TestResult> results = testResultRepository.findByQuizIdOrderByScoreDesc(quizId);
-
-        List<QuizAllResultsDTO.UserResultDTO> userResults = results.stream().map(result -> QuizAllResultsDTO.UserResultDTO.builder().userId(result.getUser().getId()).username(result.getUser().getAccount().getUsername()).score(result.getScore()).isPassed(result.getIsPassed()).takenDate(result.getTakenDate()).timeSpent(result.getTimeSpent()).build()).collect(Collectors.toList());
-
-        return QuizAllResultsDTO.builder().quizId(quizId).quizTitle(quiz.getTitle()).userResults(userResults).build();
+        return results.stream().map(TestResultMapper::toDTO).collect(Collectors.toList());
     }
 
     @Override
@@ -534,14 +645,36 @@ public class QuizService implements IQuizService {
         Quiz quiz = quizRepository.findById(quizId).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy quiz với ID: " + quizId));
 
         List<TestResult> results = testResultRepository.findByQuizIdOrderByScoreDesc(quizId);
-        return calculateQuizStatistics(quiz, results);
+
+        // Nếu không có kết quả
+        if (results.isEmpty()) {
+            return QuizStatisticsDTO.builder().quizId(quiz.getId()).quizTitle(quiz.getTitle()).totalAttempts(0).passedAttempts(0).averageScore(0.0).highestScore(0.0).lowestScore(0.0).averageTimeSpent(0.0).build();
+        }
+
+        // Tính toán thống kê
+        long passedCount = results.stream().filter(result -> result.getScore() >= quiz.getPassingScore()).count();
+
+        double averageScore = results.stream().mapToDouble(TestResult::getScore).average().orElse(0.0);
+
+        double highestScore = results.stream().mapToDouble(TestResult::getScore).max().orElse(0.0);
+
+        double lowestScore = results.stream().mapToDouble(TestResult::getScore).min().orElse(0.0);
+
+        double averageTimeSpent = results.stream().mapToLong(TestResult::getTimeSpent).average().orElse(0.0);
+
+        return QuizStatisticsDTO.builder().quizId(quiz.getId()).quizTitle(quiz.getTitle()).totalAttempts(results.size()).passedAttempts((int) passedCount).averageScore(Math.round(averageScore * 100.0) / 100.0).highestScore(Math.round(highestScore * 100.0) / 100.0).lowestScore(Math.round(lowestScore * 100.0) / 100.0).averageTimeSpent(Math.round(averageTimeSpent * 100.0) / 100.0).build();
     }
 
-    // ==================== UTILITY METHODS ====================
+    // ==================== KIỂM TRA ====================
 
     @Override
     public boolean existsQuiz(Long quizId) {
         return quizRepository.existsById(quizId);
+    }
+
+    @Override
+    public boolean existsAnyQuizBySectionId(Long sectionId) {
+        return quizRepository.existsBySectionId(sectionId);
     }
 
     @Override
@@ -552,93 +685,45 @@ public class QuizService implements IQuizService {
         return quiz.getIsPublished() && quiz.getIsActive();
     }
 
-    @Override
-    public long countQuizzesBySectionId(Long sectionId) {
-        return quizRepository.countBySectionId(sectionId);
-    }
+    // ==================== PHƯƠNG THỨC HỖ TRỢ RIÊNG ====================
 
-    @Override
-    public void validateQuizForTaking(Long quizId, Long userId) {
-        Quiz quiz = quizRepository.findById(quizId).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy quiz với ID: " + quizId));
-
-        if (!quiz.getIsPublished() || !quiz.getIsActive()) {
-            throw new IllegalArgumentException("Quiz không khả dụng");
-        }
-
-        List<TestResult> previousAttempts = testResultRepository.findByUserIdAndQuizIdOrderByTakenDateDesc(userId, quizId);
-        if (!previousAttempts.isEmpty()) {
-            log.info("User {} has {} previous attempts for quiz {}", userId, previousAttempts.size(), quizId);
-        }
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public TestResultDTO getQuizResult(Long resultId) {
-        TestResult testResult = testResultRepository.findById(resultId).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy kết quả với ID: " + resultId));
-
-        List<QuizAnswer> quizAnswers = quizAnswerRepository.findByTestResultId(resultId);
-        return TestResultMapper.toDTOWithDetails(testResult, quizAnswers);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public QuizResultDetailDTO getQuizResultDetail(Long resultId) {
-        TestResultDTO testResult = getQuizResult(resultId);
-
-        Quiz quiz = quizRepository.findById(testResult.getQuizId()).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy quiz"));
-
-        QuizBasicInfoDTO quizInfo = QuizAdminMapper.toBasicInfoDTO(quiz);
-
-        return QuizResultDetailDTO.builder().summary(testResult).quizInfo(quizInfo).build();
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<TestResultDTO> getQuizResults(Long quizId) {
-        List<TestResult> results = testResultRepository.findByQuizIdOrderByScoreDesc(quizId);
-        return results.stream().map(result -> {
-            List<QuizAnswer> quizAnswers = quizAnswerRepository.findByTestResultIdOrderByQuestion(result.getId());
-            return TestResultMapper.toDTOWithDetails(result, quizAnswers);
-        }).collect(Collectors.toList());
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<QuizStatisticsDTO> getQuizStatisticsBySectionId(Long sectionId) {
-        List<Quiz> quizzes = quizRepository.findBySectionId(sectionId);
-        return quizzes.stream().map(quiz -> {
-            List<TestResult> results = testResultRepository.findByQuizIdOrderByScoreDesc(quiz.getId());
-            return calculateQuizStatistics(quiz, results);
-        }).collect(Collectors.toList());
-    }
-
-    @Override
-    public boolean existsAnyQuizBySectionId(Long sectionId) {
-        return quizRepository.existsBySectionId(sectionId);
-    }
-
-    // ==================== PRIVATE HELPER METHODS ====================
-
+    /**
+     * Tạo câu hỏi cho quiz
+     */
     private List<Question> createQuestionsForQuiz(Quiz quiz, List<QuestionCreateRequest> questionRequests) {
         List<Question> questions = new ArrayList<>();
 
         for (QuestionCreateRequest questionRequest : questionRequests) {
-            // Validate trước khi tạo
+            // ============ THÊM VALIDATION CHO ẢNH ============
+            if (questionRequest.getImageUrl() != null && !questionRequest.getImageUrl().isEmpty()) {
+                validateImageUrl(questionRequest.getImageUrl(), "imageUrl của câu hỏi");
+            }
+            // ===============================================
+
+            // Validate options trước khi tạo
             if (questionRequest.getOptions() != null && !questionRequest.getOptions().isEmpty()) {
+                // ============ THÊM VALIDATION CHO ẢNH OPTIONS ============
+                for (OptionCreateRequest option : questionRequest.getOptions()) {
+                    if (option.getImageUrl() != null && !option.getImageUrl().isEmpty()) {
+                        validateImageUrl(option.getImageUrl(), "imageUrl của đáp án");
+                    }
+                }
+                // ========================================================
+
                 validateQuestionOptionsBasedOnType(questionRequest.getQuestionType(), questionRequest.getOptions());
 
-                // ⭐ THÊM: Tự động set isCorrect = true cho FILL_IN_BLANK
+                // Với FILL_IN_BLANK, tất cả option đều là đáp án đúng
                 if (questionRequest.getQuestionType() == QuestionType.FILL_IN_BLANK) {
                     questionRequest.getOptions().forEach(option -> option.setIsCorrect(true));
                 }
             }
 
-            Question question = Question.builder().questionText(questionRequest.getQuestionText()).questionType(questionRequest.getQuestionType()).score(questionRequest.getScore()).orderIndex(questionRequest.getOrderIndex()).imageUrl(questionRequest.getImageUrl()).explanation(questionRequest.getExplanation())
-                    // ⭐ XÓA: .correctAnswer(questionRequest.getCorrectAnswer())
-                    .quiz(quiz).build();
+            // Tạo câu hỏi
+            Question question = Question.builder().questionText(questionRequest.getQuestionText()).questionType(questionRequest.getQuestionType()).score(questionRequest.getScore()).orderIndex(questionRequest.getOrderIndex()).imageUrl(questionRequest.getImageUrl()).explanation(questionRequest.getExplanation()).quiz(quiz).build();
 
             Question savedQuestion = questionRepository.save(question);
 
+            // Tạo options nếu có
             if (questionRequest.getOptions() != null && !questionRequest.getOptions().isEmpty()) {
                 List<Option> options = createOptionsForQuestion(savedQuestion, questionRequest.getOptions());
                 savedQuestion.setOptions(options);
@@ -649,6 +734,9 @@ public class QuizService implements IQuizService {
         return questions;
     }
 
+    /**
+     * Validate options theo loại câu hỏi
+     */
     private void validateQuestionOptionsBasedOnType(QuestionType questionType, List<OptionCreateRequest> options) {
         long correctCount = options.stream().filter(OptionCreateRequest::getIsCorrect).count();
 
@@ -672,20 +760,25 @@ public class QuizService implements IQuizService {
                 }
                 break;
             case FILL_IN_BLANK:
+                // FILL_IN_BLANK phải có ít nhất 1 option
+                if (options.isEmpty()) {
+                    throw new IllegalArgumentException("Câu hỏi FILL_IN_BLANK phải có ít nhất 1 đáp án");
+                }
+                // Tất cả option phải là đáp án đúng
                 for (OptionCreateRequest option : options) {
                     if (!option.getIsCorrect()) {
                         throw new IllegalArgumentException("Câu hỏi FILL_IN_BLANK chỉ có đáp án đúng, không có đáp án sai");
                     }
                 }
                 break;
-            case ESSAY:
-                if (!options.isEmpty()) {
-                    throw new IllegalArgumentException("Câu hỏi ESSAY không có lựa chọn, chỉ có câu trả lời tự luận");
-                }
-                break;
+            default:
+                throw new IllegalArgumentException("Loại câu hỏi không được hỗ trợ: " + questionType);
         }
     }
 
+    /**
+     * Tạo options cho câu hỏi
+     */
     private List<Option> createOptionsForQuestion(Question question, List<?> optionRequests) {
         List<Option> options = new ArrayList<>();
 
@@ -709,10 +802,33 @@ public class QuizService implements IQuizService {
         return options;
     }
 
+    /**
+     * Validate image URL format
+     */
+    private void validateImageUrl(String imageUrl, String fieldName) {
+        if (imageUrl != null && !imageUrl.trim().isEmpty()) {
+            if (!imageUrl.startsWith("http://") && !imageUrl.startsWith("https://")) {
+                throw new IllegalArgumentException(fieldName + " phải là URL hợp lệ (bắt đầu với http:// hoặc https://)");
+            }
+
+            // Kiểm tra định dạng ảnh
+            String lowerUrl = imageUrl.toLowerCase();
+            if (!lowerUrl.matches(".*\\.(jpg|jpeg|png|gif|webp|bmp)(\\?.*)?$")) {
+                throw new IllegalArgumentException(fieldName + " chỉ chấp nhận các định dạng: JPG, JPEG, PNG, GIF, WEBP, BMP");
+            }
+        }
+    }
+
+    /**
+     * Tính điểm cho bài làm
+     */
     private QuizGradingResult calculateScore(Quiz quiz, QuizSubmissionRequest request) {
         QuizGradingResult result = new QuizGradingResult();
+
+        // Lấy tất cả câu hỏi của quiz
         List<Question> questions = questionRepository.findByQuizId(quiz.getId());
 
+        // Tổng điểm và số câu hỏi
         result.setTotalQuestions(questions.size());
         result.setTotalPoints(questions.stream().mapToDouble(Question::getScore).sum());
 
@@ -720,32 +836,31 @@ public class QuizService implements IQuizService {
         int correctAnswers = 0;
         List<AnswerResult> answerResults = new ArrayList<>();
 
-        // Tạo map để tìm câu hỏi nhanh hơn
+        // Tạo map để tìm câu hỏi nhanh
         Map<Long, Question> questionMap = questions.stream().collect(Collectors.toMap(Question::getId, q -> q));
 
+        // Xử lý từng câu trả lời
         for (AnswerRequest answerRequest : request.getAnswers()) {
             AnswerResult answerResult = new AnswerResult();
 
             Question question = questionMap.get(answerRequest.getQuestionId());
             if (question == null) {
-                throw new ResourceNotFoundException("Không tìm thấy câu hỏi với ID: " + answerRequest.getQuestionId());
+                log.warn("Không tìm thấy câu hỏi với ID: {}", answerRequest.getQuestionId());
+                continue;
             }
 
+            // Lưu câu trả lời của user
             answerResult.setQuestion(question);
             answerResult.setUserAnswer(serializeUserAnswer(answerRequest));
 
+            // Kiểm tra đáp án đúng/sai
             boolean isCorrect = checkAnswerCorrect(question, answerRequest);
             answerResult.setCorrect(isCorrect);
 
-            double earnedScore;
-            if (question.getQuestionType() == QuestionType.ESSAY) {
-                // Essay cần xử lý đặc biệt
-                earnedScore = calculateEssayScore(question, answerRequest.getEssayAnswer());
-            } else {
-                earnedScore = isCorrect ? question.getScore() : 0;
-            }
-
+            // Tính điểm
+            double earnedScore = isCorrect ? question.getScore() : 0;
             answerResult.setEarnedScore(earnedScore);
+
             totalScore += earnedScore;
             if (isCorrect) correctAnswers++;
 
@@ -755,136 +870,146 @@ public class QuizService implements IQuizService {
         result.setEarnedPoints(totalScore);
         result.setCorrectAnswers(correctAnswers);
         result.setAnswerResults(answerResults);
+
         return result;
     }
 
+    /**
+     * Kiểm tra đáp án có đúng không
+     */
     private boolean checkAnswerCorrect(Question question, AnswerRequest answerRequest) {
-        return switch (question.getQuestionType()) {
-            case SINGLE_CHOICE -> checkSingleChoice(question, answerRequest.getSelectedOptionId());
-            case MULTIPLE_CHOICE -> checkMultipleChoice(question, answerRequest.getSelectedOptionIds());
-            case TRUE_FALSE -> checkTrueFalse(question, answerRequest.getSelectedOptionId());
-            case FILL_IN_BLANK -> checkFillInBlank(question, answerRequest.getFillInBlankAnswer());
-            case ESSAY -> checkEssay(question, answerRequest.getEssayAnswer());
-        };
+        switch (question.getQuestionType()) {
+            case SINGLE_CHOICE:
+                return checkSingleChoice(question, answerRequest.getSelectedOptionId());
+            case MULTIPLE_CHOICE:
+                return checkMultipleChoice(question, answerRequest.getSelectedOptionIds());
+            case TRUE_FALSE:
+                return checkTrueFalse(question, answerRequest.getSelectedOptionId());
+            case FILL_IN_BLANK:
+                return checkFillInBlank(question, answerRequest.getFillInBlankAnswer());
+            default:
+                return false;
+        }
     }
 
+    /**
+     * Kiểm tra SINGLE_CHOICE
+     */
     private boolean checkSingleChoice(Question question, Long selectedOptionId) {
-        if (selectedOptionId == null || question.getOptions() == null) return false;
+        if (selectedOptionId == null || question.getOptions() == null || question.getOptions().isEmpty()) {
+            return false;
+        }
 
-        Optional<Option> selectedOption = question.getOptions().stream().filter(option -> option.getId().equals(selectedOptionId)).findFirst();
-
-        return selectedOption.isPresent() && Boolean.TRUE.equals(selectedOption.get().getIsCorrect());
+        return question.getOptions().stream().filter(option -> option.getId().equals(selectedOptionId)).findFirst().map(Option::getIsCorrect).orElse(false);
     }
 
+    /**
+     * Kiểm tra MULTIPLE_CHOICE
+     */
     private boolean checkMultipleChoice(Question question, List<Long> selectedOptionIds) {
-        if (selectedOptionIds == null || selectedOptionIds.isEmpty() || question.getOptions() == null) return false;
+        if (selectedOptionIds == null || selectedOptionIds.isEmpty() || question.getOptions() == null || question.getOptions().isEmpty()) {
+            return false;
+        }
 
+        // Lấy ID của tất cả đáp án đúng
         Set<Long> correctOptionIds = question.getOptions().stream().filter(opt -> Boolean.TRUE.equals(opt.getIsCorrect())).map(Option::getId).collect(Collectors.toSet());
 
+        // Lấy ID của tất cả đáp án sai
+        Set<Long> incorrectOptionIds = question.getOptions().stream().filter(opt -> !Boolean.TRUE.equals(opt.getIsCorrect())).map(Option::getId).collect(Collectors.toSet());
+
+        // Chuyển selected IDs sang Set
         Set<Long> selectedIds = new HashSet<>(selectedOptionIds);
 
-        Set<Long> incorrectOptionIds = question.getOptions().stream().filter(option -> !Boolean.TRUE.equals(option.getIsCorrect())).map(Option::getId).collect(Collectors.toSet());
-
+        // Điều kiện: chọn tất cả đáp án đúng và không chọn đáp án sai nào
         boolean hasAllCorrect = selectedIds.containsAll(correctOptionIds);
         boolean hasNoIncorrect = Collections.disjoint(selectedIds, incorrectOptionIds);
 
         return hasAllCorrect && hasNoIncorrect;
     }
 
+    /**
+     * Kiểm tra TRUE_FALSE
+     */
     private boolean checkTrueFalse(Question question, Long selectedOptionId) {
-        if (selectedOptionId == null || question.getOptions() == null) return false;
+        if (selectedOptionId == null || question.getOptions() == null || question.getOptions().isEmpty()) {
+            return false;
+        }
 
-        Optional<Option> selectedOption = question.getOptions().stream().filter(option -> option.getId().equals(selectedOptionId)).findFirst();
-
-        return selectedOption.isPresent() && Boolean.TRUE.equals(selectedOption.get().getIsCorrect());
+        return question.getOptions().stream().filter(option -> option.getId().equals(selectedOptionId)).findFirst().map(Option::getIsCorrect).orElse(false);
     }
 
+    /**
+     * Kiểm tra FILL_IN_BLANK
+     */
     private boolean checkFillInBlank(Question question, String userAnswer) {
-        if (userAnswer == null || userAnswer.trim().isEmpty()) return false;
-
-        // Không dùng correctAnswer nữa, check trong options
-        if (question.getOptions() == null || question.getOptions().isEmpty()) return false;
+        if (userAnswer == null || userAnswer.trim().isEmpty() || question.getOptions() == null || question.getOptions().isEmpty()) {
+            return false;
+        }
 
         String normalizedUserAnswer = userAnswer.trim().toLowerCase();
 
-        // Check xem user answer có trùng với bất kỳ option nào không
-        return question.getOptions().stream().map(Option::getOptionText).filter(Objects::nonNull).map(String::trim).map(String::toLowerCase).anyMatch(correctAnswer -> correctAnswer.equals(normalizedUserAnswer));
+        // Kiểm tra xem câu trả lời có khớp với bất kỳ đáp án đúng nào không
+        return question.getOptions().stream().filter(opt -> Boolean.TRUE.equals(opt.getIsCorrect())).map(Option::getOptionText).filter(Objects::nonNull).map(String::trim).map(String::toLowerCase).anyMatch(correctAnswer -> correctAnswer.equals(normalizedUserAnswer));
     }
 
-    private boolean checkEssay(Question question, String userAnswer) {
-        // Essay luôn được coi là đã trả lời (điểm sẽ được tính sau khi giáo viên chấm)
-        // Hoặc có thể để điểm mặc định là 0 và chấm sau
-        return userAnswer != null && !userAnswer.trim().isEmpty();
-    }
-
-    // Thêm logic xử lý điểm cho ESSAY
-    private double calculateEssayScore(Question question, String userAnswer) {
-        // Mặc định ESSAY cho 0 điểm, cần giáo viên chấm sau
-        // Hoặc có thể implement AI scoring nếu cần
-        return 0.0;
-    }
-
+    /**
+     * Chuyển câu trả lời thành string để lưu
+     */
     private String serializeUserAnswer(AnswerRequest answerRequest) {
         if (answerRequest.getSelectedOptionIds() != null && !answerRequest.getSelectedOptionIds().isEmpty()) {
-            return String.join(",", answerRequest.getSelectedOptionIds().stream().map(String::valueOf).collect(Collectors.toList()));
+            return "Multiple Choice: " + String.join(",", answerRequest.getSelectedOptionIds().stream().map(String::valueOf).collect(Collectors.toList()));
         } else if (answerRequest.getSelectedOptionId() != null) {
-            return answerRequest.getSelectedOptionId().toString();
-        } else if (answerRequest.getEssayAnswer() != null) {
-            return answerRequest.getEssayAnswer();
+            return "Single Choice: " + answerRequest.getSelectedOptionId();
         } else if (answerRequest.getFillInBlankAnswer() != null) {
-            return answerRequest.getFillInBlankAnswer();
+            return "Fill in blank: " + answerRequest.getFillInBlankAnswer();
         }
-        return "";
+        return "No answer";
     }
 
+    /**
+     * Lưu kết quả bài làm
+     */
     private TestResult saveTestResult(Quiz quiz, User user, QuizGradingResult gradingResult, Long timeSpent) {
-        double scorePercentage = gradingResult.getTotalPoints() > 0 ? (gradingResult.getEarnedPoints() / gradingResult.getTotalPoints()) * 100 : 0;
+        double totalPoints = gradingResult.getTotalPoints();
+        double earnedPoints = gradingResult.getEarnedPoints();
+        double scorePercentage = totalPoints > 0 ? (earnedPoints / totalPoints) * 100 : 0;
 
-        TestResult testResult = TestResult.builder().quiz(quiz).user(user).score(scorePercentage).totalPoints(gradingResult.getTotalPoints()).earnedPoints(gradingResult.getEarnedPoints()).correctAnswers(gradingResult.getCorrectAnswers()).totalQuestions(gradingResult.getTotalQuestions()).timeSpent(timeSpent != null ? timeSpent : 0L).takenDate(LocalDateTime.now()).isPassed(scorePercentage >= quiz.getPassingScore()).build();
+        // Đảm bảo timeSpent không null
+        Long actualTimeSpent = timeSpent != null ? timeSpent : 0L;
+
+        TestResult testResult = TestResult.builder().quiz(quiz).user(user).score(scorePercentage).totalPoints(totalPoints).earnedPoints(earnedPoints).correctAnswers(gradingResult.getCorrectAnswers()).totalQuestions(gradingResult.getTotalQuestions()).timeSpent(actualTimeSpent).takenDate(LocalDateTime.now()).isPassed(scorePercentage >= quiz.getPassingScore()).build();
 
         return testResultRepository.save(testResult);
     }
 
+    /**
+     * Lưu chi tiết các câu trả lời
+     */
     private void saveQuizAnswers(TestResult testResult, List<AnswerRequest> answers, QuizGradingResult gradingResult) {
         List<QuizAnswer> quizAnswers = new ArrayList<>();
 
+        // Tạo map để tra cứu nhanh
         Map<Long, AnswerResult> answerResultMap = gradingResult.getAnswerResults().stream().collect(Collectors.toMap(ar -> ar.getQuestion().getId(), ar -> ar));
 
         for (AnswerRequest answerRequest : answers) {
             AnswerResult answerResult = answerResultMap.get(answerRequest.getQuestionId());
-            if (answerResult == null) continue;
+            if (answerResult == null) {
+                log.warn("Không tìm thấy kết quả cho câu hỏi: {}", answerRequest.getQuestionId());
+                continue;
+            }
 
             QuizAnswer quizAnswer = QuizAnswer.builder().testResult(testResult).question(answerResult.getQuestion()).userAnswer(answerResult.getUserAnswer()).isCorrect(answerResult.isCorrect()).earnedScore(answerResult.getEarnedScore()).createdAt(LocalDateTime.now()).build();
 
             quizAnswers.add(quizAnswer);
         }
 
-        quizAnswerRepository.saveAll(quizAnswers);
-    }
-
-    private QuizStatisticsDTO calculateQuizStatistics(Quiz quiz, List<TestResult> results) {
-        if (results.isEmpty()) {
-            return QuizStatisticsDTO.builder().quizId(quiz.getId()).quizTitle(quiz.getTitle()).totalAttempts(0).passedAttempts(0).averageScore(0.0).highestScore(0.0).lowestScore(0.0).averageTimeSpent(0.0).firstAttemptDate(null).lastAttemptDate(null).questionStats(Collections.emptyList()).build();
+        if (!quizAnswers.isEmpty()) {
+            quizAnswerRepository.saveAll(quizAnswers);
+            log.info("Đã lưu {} câu trả lời cho kết quả test {}", quizAnswers.size(), testResult.getId());
         }
-
-        long passedCount = results.stream().filter(result -> result.getScore() >= quiz.getPassingScore()).count();
-
-        double averageScore = results.stream().mapToDouble(TestResult::getScore).average().orElse(0.0);
-
-        double highestScore = results.stream().mapToDouble(TestResult::getScore).max().orElse(0.0);
-
-        double lowestScore = results.stream().mapToDouble(TestResult::getScore).min().orElse(0.0);
-
-        double averageTimeSpent = results.stream().mapToLong(TestResult::getTimeSpent).average().orElse(0.0);
-
-        LocalDateTime firstAttempt = results.stream().map(TestResult::getTakenDate).min(LocalDateTime::compareTo).orElse(null);
-
-        LocalDateTime lastAttempt = results.stream().map(TestResult::getTakenDate).max(LocalDateTime::compareTo).orElse(null);
-
-        return QuizStatisticsDTO.builder().quizId(quiz.getId()).quizTitle(quiz.getTitle()).totalAttempts(results.size()).passedAttempts((int) passedCount).averageScore(Math.round(averageScore * 100.0) / 100.0).highestScore(Math.round(highestScore * 100.0) / 100.0).lowestScore(Math.round(lowestScore * 100.0) / 100.0).averageTimeSpent(Math.round(averageTimeSpent * 100.0) / 100.0).firstAttemptDate(firstAttempt).lastAttemptDate(lastAttempt).questionStats(Collections.emptyList()).build();
     }
 
-    // ==================== INNER CLASSES ====================
+    // ==================== LỚP HỖ TRỢ NỘI BỘ ====================
 
     @Getter
     @Setter

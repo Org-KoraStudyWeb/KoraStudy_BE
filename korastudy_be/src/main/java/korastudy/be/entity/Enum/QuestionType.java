@@ -5,5 +5,4 @@ public enum QuestionType {
     MULTIPLE_CHOICE,    // Chọn nhiều đáp án đúng
     TRUE_FALSE,         // Đúng/Sai
     FILL_IN_BLANK,      // Điền từ/chữ vào chỗ trống (quan trọng cho tiếng Hàn)
-    ESSAY               // Tự luận
 }

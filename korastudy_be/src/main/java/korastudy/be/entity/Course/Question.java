@@ -45,4 +45,7 @@ public class Question extends BaseTimeEntity {
 
     @OneToMany(mappedBy = "question", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Option> options;
+
+    @OneToMany(mappedBy = "question", cascade = CascadeType.REMOVE)
+    private List<QuizAnswer> quizAnswers;
 }
