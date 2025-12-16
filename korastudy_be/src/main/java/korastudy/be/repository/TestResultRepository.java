@@ -17,4 +17,6 @@ public interface TestResultRepository extends JpaRepository<TestResult, Long> {
     List<TestResult> findByQuizIdOrderByScoreDesc(Long quizId);
 
     boolean existsByUserIdAndQuizId(Long userId, Long quizId);
+
+    List<TestResult> findByUserIdAndQuizIdOrderByTakenDateDesc(Long userId, Long quizId);
 }

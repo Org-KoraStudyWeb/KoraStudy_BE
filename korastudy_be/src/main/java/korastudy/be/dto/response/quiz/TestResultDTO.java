@@ -10,7 +10,10 @@ import java.util.List;
 @Builder
 public class TestResultDTO {
     private Long id;
-    private Double score;
+    private Double score;           // Điểm phần trăm
+    private Double earnedPoints;    //  Điểm số thực tế
+    private Double totalPoints;     //  Tổng điểm tối đa
+
     private Integer totalQuestions;
     private Integer correctAnswers;
     private Integer passingScore;
@@ -22,6 +25,9 @@ public class TestResultDTO {
     private Long userId;
     private String username;
 
-    // Danh sách câu trả lời chi tiết
-    private List<QuizAnswerDTO> answerDetails;
+    private List<AnswerResultDTO> answerDetails;
+
+    // So sánh với lần làm trước
+    private Double previousScore;
+    private Boolean isImproved;
 }

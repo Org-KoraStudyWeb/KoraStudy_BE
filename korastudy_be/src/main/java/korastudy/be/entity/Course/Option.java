@@ -20,7 +20,13 @@ public class Option extends BaseTimeEntity {
     private String optionText;
 
     @Column(name = "is_correct")
-    private boolean isCorrect;
+    private Boolean isCorrect = false;
+
+    @Column(name = "image_url", columnDefinition = "NVARCHAR(500)")
+    private String imageUrl; // Hình ảnh của đáp án
+
+    @Column(name = "order_index")
+    private Integer orderIndex;
 
     @ManyToOne
     @JoinColumn(name = "question_id")
