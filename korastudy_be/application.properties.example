@@ -25,3 +25,12 @@ spring.mail.password=YOUR_EMAIL_APP_PASSWORD
 
 # Gemini AI Configuration
 gemini.api.key=YOUR_GEMINI_API_KEY
+
+# Azure Translator Configuration
+azure.translator.key=YOUR_AZURE_TRANSLATOR_KEY
+azure.translator.region=eastasia
+azure.translator.endpoint=https://api.cognitive.microsofttranslator.com
+
+# Azure Text-to-Speech Configuration
+azure.speech.key=YOUR_AZURE_SPEECH_KEY
+azure.speech.region=eastasia
