@@ -24,4 +24,10 @@ public class QuizUpdateRequest {
     @Min(value = 1, message = "Điểm đạt phải từ 1-100")
     @Max(value = 100, message = "Điểm đạt phải từ 1-100")
     private Integer passingScore;
+
+    @NotNull(message = "Trạng thái publish không được để trống")
+    private Boolean isPublished;
+
+    private Boolean isActive = true;
 }
+

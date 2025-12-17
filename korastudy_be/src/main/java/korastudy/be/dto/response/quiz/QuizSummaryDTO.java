@@ -13,7 +13,10 @@ public class QuizSummaryDTO {
     private Integer timeLimit;
     private Integer passingScore;
     private Integer questionCount;
-    private Long lessonId;
-    private String lessonTitle;
     private LocalDateTime createdAt;
+
+    private Boolean isPublished;
+    private Boolean isActive;
+    private Long sectionId;     // Nếu cần
+    private String sectionName; // Nếu cần
 }

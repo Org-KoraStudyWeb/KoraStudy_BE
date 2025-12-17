@@ -28,6 +28,13 @@ public class QuizCreateRequest {
     @Max(value = 100, message = "Điểm đạt phải từ 1-100")
     private Integer passingScore; // %
 
+    @Builder.Default
+    @NotNull(message = "Trạng thái publish không được để trống")
+    private Boolean isPublished = false;
+
+    @Builder.Default
+    private Boolean isActive = true;
+
     @NotNull
     private Long sectionId;
 

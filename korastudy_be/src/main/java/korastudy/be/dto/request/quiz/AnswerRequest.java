@@ -1,6 +1,7 @@
 package korastudy.be.dto.request.quiz;
 
 import jakarta.validation.constraints.NotNull;
+import korastudy.be.entity.Enum.QuestionType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -16,8 +17,16 @@ public class AnswerRequest {
     @NotNull(message = "ID câu hỏi không được để trống")
     private Long questionId;
 
-    private List<Long> selectedOptionIds; // MULTIPLE_CHOICE
-    private Long selectedOptionId;        // SINGLE_CHOICE
-    private String essayAnswer;           // ESSAY
-    private Boolean trueFalseAnswer;      // TRUE_FALSE
+    // Cho SINGLE_CHOICE, TRUE_FALSE
+    private Long selectedOptionId;
+
+    // Cho MULTIPLE_CHOICE
+    private List<Long> selectedOptionIds;
+
+    // Cho ESSAY
+    private String essayAnswer;
+
+    // Cho FILL_IN_BLANK
+    private String fillInBlankAnswer;
+
 }

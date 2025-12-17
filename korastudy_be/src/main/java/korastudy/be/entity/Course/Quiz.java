@@ -18,6 +18,8 @@ public class Quiz extends BaseTimeEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+
+
     @Column(name = "title", columnDefinition = "NVARCHAR(500)")
     private String title;
 
@@ -25,10 +27,16 @@ public class Quiz extends BaseTimeEntity {
     private String description;
 
     @Column(name = "time_limit")
-    private Integer timeLimit; //  THÊM: thời gian làm bài (phút)
+    private Integer timeLimit; //   thời gian làm bài (phút)
 
     @Column(name = "passing_score")
-    private Integer passingScore; //  THÊM: điểm đạt (%)
+    private Integer passingScore; //  điểm đạt (%)
+
+    @Column(name = "is_published")
+    private Boolean isPublished = false;
+
+    @Column(name = "is_active")
+    private Boolean isActive = true;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "section_id")
