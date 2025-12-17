@@ -45,6 +45,5 @@ public class MockTestPart {
     @OneToMany(mappedBy = "questionPart", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<MockTestQuestion> questions;
 
-    @OneToMany(mappedBy = "answerPart", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<MockTestAnswers> answers;
+
 }

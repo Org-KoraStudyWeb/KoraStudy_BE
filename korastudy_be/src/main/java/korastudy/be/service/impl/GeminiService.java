@@ -1,6 +1,7 @@
 package korastudy.be.service.impl;
 
 import korastudy.be.dto.request.ai.ChatRequest;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
@@ -8,13 +9,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Service tích hợp Gemini API để tạo chatbot AI
- * Hỗ trợ học tiếng Hàn
+ * Hỗ trợ học tiếng Hàn với RAG
  */
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class GeminiService {
 
     @Value("${gemini.api.key}")
@@ -22,17 +25,64 @@ public class GeminiService {
 
     @Value("${gemini.api.url:https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent}")
     private String apiUrl;
+    
+    @Value("${rag.enabled:false}")
+    private boolean ragEnabled;
 
     private final RestTemplate restTemplate;
-
-    public GeminiService() {
-        this.restTemplate = new RestTemplate();
-    }
+    private final RAGService ragService;
 
     /**
-     * Tạo response từ Gemini AI
+     * Tạo response từ Gemini AI hoặc RAG
      */
     public String generateResponse(String message, List<ChatRequest.ConversationMessage> conversationHistory) {
+        try {
+            // Kiểm tra xem có dùng RAG không
+            if (ragEnabled && ragService.isServiceAvailable()) {
+                log.info("Using RAG for response generation");
+                return generateResponseWithRAG(message, conversationHistory);
+            } else {
+                log.info("Using direct Gemini API");
+                return generateResponseWithGemini(message, conversationHistory);
+            }
+            
+        } catch (Exception e) {
+            log.error("Error generating response", e);
+            throw new RuntimeException("Lỗi khi tạo phản hồi: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Tạo response sử dụng RAG
+     */
+    private String generateResponseWithRAG(String message, List<ChatRequest.ConversationMessage> conversationHistory) {
+        try {
+            // Convert conversation history sang format cho RAG
+            List<Map<String, String>> history = conversationHistory != null ? 
+                conversationHistory.stream()
+                    .map(msg -> {
+                        Map<String, String> map = new HashMap<>();
+                        map.put("role", msg.getRole());
+                        map.put("content", msg.getContent());
+                        return map;
+                    })
+                    .collect(Collectors.toList()) :
+                new ArrayList<>();
+            
+            // Gọi RAG service
+            return ragService.queryRAG(message, history);
+            
+        } catch (Exception e) {
+            log.error("Error calling RAG, falling back to direct Gemini", e);
+            // Fallback to direct Gemini nếu RAG lỗi
+            return generateResponseWithGemini(message, conversationHistory);
+        }
+    }
+    
+    /**
+     * Tạo response sử dụng Gemini API trực tiếp
+     */
+    private String generateResponseWithGemini(String message, List<ChatRequest.ConversationMessage> conversationHistory) {
         try {
             // Tạo system prompt
             String systemPrompt = """

@@ -1,0 +1,36 @@
+# EXAMPLE Environment Variables - DO NOT put real values here!
+# Copy this to application-local.properties and fill in your actual values
+
+# Database Configuration
+spring.datasource.url=jdbc:sqlserver://localhost:1433;databaseName=YOUR_DB_NAME;encrypt=true;trustServerCertificate=true
+spring.datasource.username=YOUR_DB_USERNAME
+spring.datasource.password=YOUR_DB_PASSWORD
+
+# JWT Configuration
+jwt.secret=YOUR_JWT_SECRET_KEY_HERE_MINIMUM_256_BITS
+jwt.expiration=86400000
+
+# Cloudinary Configuration (for image storage)
+cloudinary.cloud-name=YOUR_CLOUDINARY_CLOUD_NAME
+cloudinary.api-key=YOUR_CLOUDINARY_API_KEY
+cloudinary.api-secret=YOUR_CLOUDINARY_API_SECRET
+
+# VNPay Payment Gateway
+vnpay.tmnCode=YOUR_VNPAY_TMN_CODE
+vnpay.hashSecret=YOUR_VNPAY_HASH_SECRET
+
+# Email SMTP Configuration
+spring.mail.username=YOUR_EMAIL@gmail.com
+spring.mail.password=YOUR_EMAIL_APP_PASSWORD
+
+# Gemini AI Configuration
+gemini.api.key=YOUR_GEMINI_API_KEY
+
+# Azure Translator Configuration
+azure.translator.key=YOUR_AZURE_TRANSLATOR_KEY
+azure.translator.region=eastasia
+azure.translator.endpoint=https://api.cognitive.microsofttranslator.com
+
+# Azure Text-to-Speech Configuration
+azure.speech.key=YOUR_AZURE_SPEECH_KEY
+azure.speech.region=eastasia
