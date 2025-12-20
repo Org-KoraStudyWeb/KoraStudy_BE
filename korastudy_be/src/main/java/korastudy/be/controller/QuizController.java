@@ -34,8 +34,7 @@ public class QuizController {
         }
 
         String username = userDetails.getUsername();
-        Account account = accountRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tài khoản với username: " + username));
+        Account account = accountRepository.findByUsername(username).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tài khoản với username: " + username));
 
         return account.getUser().getId();
     }
@@ -86,9 +85,7 @@ public class QuizController {
     // ==================== QUIZ CHO HỌC SINH ====================
 
     @GetMapping("/section/{sectionId}/take")
-    public ResponseEntity<List<QuizSummaryDTO>> getQuizzesForTakingBySectionId(
-            @PathVariable Long sectionId,
-            @AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<List<QuizSummaryDTO>> getQuizzesForTakingBySectionId(@PathVariable Long sectionId, @AuthenticationPrincipal UserDetails userDetails) {
         Long userId = getUserIdFromPrincipal(userDetails);
         List<QuizSummaryDTO> quizzes = quizService.getAvailableQuizzesForStudent(sectionId, userId);
         return ResponseEntity.ok(quizzes);
@@ -109,28 +106,21 @@ public class QuizController {
     // ==================== LÀM BÀI THI ====================
 
     @PostMapping("/{quizId}/start")
-    public ResponseEntity<TestResultDTO> startQuiz(
-            @PathVariable Long quizId,
-            @AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<TestResultDTO> startQuiz(@PathVariable Long quizId, @AuthenticationPrincipal UserDetails userDetails) {
         Long userId = getUserIdFromPrincipal(userDetails);
         TestResultDTO result = quizService.startQuiz(quizId, userId);
         return ResponseEntity.ok(result);
     }
 
     @PostMapping("/{quizId}/submit")
-    public ResponseEntity<TestResultDTO> submitQuiz(
-            @PathVariable Long quizId,
-            @Valid @RequestBody QuizSubmissionRequest request,
-            @AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<TestResultDTO> submitQuiz(@PathVariable Long quizId, @Valid @RequestBody QuizSubmissionRequest request, @AuthenticationPrincipal UserDetails userDetails) {
         Long userId = getUserIdFromPrincipal(userDetails);
         TestResultDTO result = quizService.submitQuiz(quizId, request, userId);
         return ResponseEntity.ok(result);
     }
 
     @GetMapping("/{quizId}/status")
-    public ResponseEntity<QuizStatusDTO> getQuizStatus(
-            @PathVariable Long quizId,
-            @AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<QuizStatusDTO> getQuizStatus(@PathVariable Long quizId, @AuthenticationPrincipal UserDetails userDetails) {
         Long userId = getUserIdFromPrincipal(userDetails);
         QuizStatusDTO status = quizService.getQuizStatusForStudent(quizId, userId);
         return ResponseEntity.ok(status);
@@ -145,9 +135,7 @@ public class QuizController {
     }
 
     @GetMapping("/results/{resultId}/student")
-    public ResponseEntity<QuizResultDetailDTO> getQuizResultForStudent(
-            @PathVariable Long resultId,
-            @AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<QuizResultDetailDTO> getQuizResultForStudent(@PathVariable Long resultId, @AuthenticationPrincipal UserDetails userDetails) {
         Long userId = getUserIdFromPrincipal(userDetails);
         QuizResultDetailDTO result = quizService.getQuizResultForStudent(resultId, userId);
         return ResponseEntity.ok(result);
@@ -158,6 +146,17 @@ public class QuizController {
     public ResponseEntity<QuizResultDetailDTO> getQuizResultForTeacher(@PathVariable Long resultId) {
         QuizResultDetailDTO result = quizService.getQuizResultForTeacher(resultId);
         return ResponseEntity.ok(result);
+
+
+    }
+
+    // Endpoint mới cho admin để lấy trạng thái quiz của một user cụ thể
+    @GetMapping("/{quizId}/user/{userId}/status")
+    @PreAuthorize("hasAnyRole('CONTENT_MANAGER', 'ADMIN')")
+    public ResponseEntity<QuizStatusDTO> getQuizStatusForUser(@PathVariable Long quizId, @PathVariable Long userId) {
+        // Tái sử dụng service method `getQuizStatusForStudent` đã có
+        QuizStatusDTO status = quizService.getQuizStatusForStudent(quizId, userId);
+        return ResponseEntity.ok(status);
     }
 
     @GetMapping("/my-results")
@@ -185,18 +184,14 @@ public class QuizController {
 
     @PostMapping("/{quizId}/questions")
     @PreAuthorize("hasAnyRole('CONTENT_MANAGER', 'ADMIN')")
-    public ResponseEntity<QuestionDTO> addQuestionToQuiz(
-            @PathVariable Long quizId,
-            @Valid @RequestBody QuestionCreateRequest request) {
+    public ResponseEntity<QuestionDTO> addQuestionToQuiz(@PathVariable Long quizId, @Valid @RequestBody QuestionCreateRequest request) {
         QuestionDTO questionDTO = quizService.addQuestionToQuiz(quizId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(questionDTO);
     }
 
     @PutMapping("/questions/{questionId}")
     @PreAuthorize("hasAnyRole('CONTENT_MANAGER', 'ADMIN')")
-    public ResponseEntity<QuestionDTO> updateQuestion(
-            @PathVariable Long questionId,
-            @Valid @RequestBody QuestionUpdateRequest request) {
+    public ResponseEntity<QuestionDTO> updateQuestion(@PathVariable Long questionId, @Valid @RequestBody QuestionUpdateRequest request) {
         QuestionDTO questionDTO = quizService.updateQuestion(questionId, request);
         return ResponseEntity.ok(questionDTO);
     }
@@ -220,9 +215,7 @@ public class QuizController {
     // Thêm đáp án vào câu hỏi
     @PostMapping("/questions/{questionId}/options")
     @PreAuthorize("hasAnyRole('CONTENT_MANAGER', 'ADMIN')")
-    public ResponseEntity<OptionDTO> addOptionToQuestion(
-            @PathVariable Long questionId,
-            @Valid @RequestBody OptionCreateRequest request) {
+    public ResponseEntity<OptionDTO> addOptionToQuestion(@PathVariable Long questionId, @Valid @RequestBody OptionCreateRequest request) {
         OptionDTO optionDTO = quizService.addOptionToQuestion(questionId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(optionDTO);
     }
@@ -230,9 +223,7 @@ public class QuizController {
     // Cập nhật đáp án
     @PutMapping("/options/{optionId}")
     @PreAuthorize("hasAnyRole('CONTENT_MANAGER', 'ADMIN')")
-    public ResponseEntity<OptionDTO> updateOption(
-            @PathVariable Long optionId,
-            @Valid @RequestBody OptionUpdateRequest request) {
+    public ResponseEntity<OptionDTO> updateOption(@PathVariable Long optionId, @Valid @RequestBody OptionUpdateRequest request) {
         OptionDTO optionDTO = quizService.updateOption(optionId, request);
         return ResponseEntity.ok(optionDTO);
     }
@@ -268,9 +259,7 @@ public class QuizController {
     }
 
     @GetMapping("/{quizId}/can-access")
-    public ResponseEntity<Boolean> canUserAccessQuiz(
-            @PathVariable Long quizId,
-            @AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<Boolean> canUserAccessQuiz(@PathVariable Long quizId, @AuthenticationPrincipal UserDetails userDetails) {
         Long userId = getUserIdFromPrincipal(userDetails);
         boolean canAccess = quizService.canUserAccessQuiz(quizId, userId);
         return ResponseEntity.ok(canAccess);
