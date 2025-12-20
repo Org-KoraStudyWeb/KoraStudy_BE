@@ -31,26 +31,19 @@ public class Post extends BaseTimeEntity {
     @Column(name = "post_published")
     private Boolean published;
 
-    @Column(name = "post_content", columnDefinition = "TEXT")
+    @Lob
+    @Column(columnDefinition = "nvarchar(max)")
     private String postContent;
 
     @Column(name = "post_published_at")
     private LocalDateTime publishedAt;
 
     @ManyToMany
-    @JoinTable(
-            name = "post_category",
-            joinColumns = @JoinColumn(name = "post_id"),
-            inverseJoinColumns = @JoinColumn(name = "category_id", referencedColumnName = "categoryId")
-    )
+    @JoinTable(name = "post_category", joinColumns = @JoinColumn(name = "post_id"), inverseJoinColumns = @JoinColumn(name = "category_id", referencedColumnName = "categoryId"))
     private List<Category> categories = new ArrayList<>();
 
     @ManyToMany
-    @JoinTable(
-            name = "post_tag",
-            joinColumns = @JoinColumn(name = "post_id"),
-            inverseJoinColumns = @JoinColumn(name = "tag_id")
-    )
+    @JoinTable(name = "post_tag", joinColumns = @JoinColumn(name = "post_id"), inverseJoinColumns = @JoinColumn(name = "tag_id"))
     private List<Tag> tags = new ArrayList<>();
 
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
