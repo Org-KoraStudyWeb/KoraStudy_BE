@@ -23,7 +23,7 @@ public class PostComment extends BaseTimeEntity {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
 
-    @Column(name = "post_comment_context", columnDefinition = "TEXT")
+    @Column(name = "post_comment_context", columnDefinition = "NVARCHAR(MAX)")
     private String context;
 
     @Column(name = "is_published")

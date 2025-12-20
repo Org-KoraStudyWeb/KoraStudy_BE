@@ -22,7 +22,7 @@ public class EmailService implements IEmailService {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            String verificationUrl = "http://localhost:3000/verify-email?token=" + verificationToken;
+            String verificationUrl = "https://witty-water-06494e100.6.azurestaticapps.net/verify-email?token=" + verificationToken;
 
             String emailContent = """
                     <!DOCTYPE html>
@@ -73,7 +73,7 @@ public class EmailService implements IEmailService {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            String resetUrl = "http://localhost:3000/reset-password?token=" + resetToken;
+            String resetUrl = "https://witty-water-06494e100.6.azurestaticapps.net/reset-password?token=" + resetToken;
 
             // SỬA: Dùng String.format() thay vì .formatted()
             String emailContent = String.format("""
