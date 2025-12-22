@@ -34,12 +34,16 @@ public class QuizController {
         }
 
         String username = userDetails.getUsername();
-        Account account = accountRepository.findByUsername(username).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tài khoản với username: " + username));
+        Account account = accountRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tài khoản với username: " + username));
 
         return account.getUser().getId();
     }
 
-    // ==================== QUIZ QUẢN LÝ (ADMIN) ====================
+    // ==================== ADMIN APIs ====================
+    // (Chỉ ADMIN, CONTENT_MANAGER)
+
+    // ==================== QUIZ QUẢN LÝ ====================
 
     @PostMapping
     @PreAuthorize("hasAnyRole('CONTENT_MANAGER', 'ADMIN')")
@@ -69,115 +73,11 @@ public class QuizController {
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping("/{quizId}")
+    @GetMapping("/{quizId}/admin")
     @PreAuthorize("hasAnyRole('CONTENT_MANAGER', 'ADMIN')")
-    public ResponseEntity<QuizDTO> getQuizById(@PathVariable Long quizId) {
+    public ResponseEntity<QuizDTO> getQuizForAdmin(@PathVariable Long quizId) {
         QuizDTO quizDTO = quizService.getQuizForTeacher(quizId);
         return ResponseEntity.ok(quizDTO);
-    }
-
-    @GetMapping("/section/{sectionId}")
-    public ResponseEntity<List<QuizSummaryDTO>> getQuizzesBySectionId(@PathVariable Long sectionId) {
-        List<QuizSummaryDTO> quizzes = quizService.getQuizzesBySectionId(sectionId);
-        return ResponseEntity.ok(quizzes);
-    }
-
-    // ==================== QUIZ CHO HỌC SINH ====================
-
-    @GetMapping("/section/{sectionId}/take")
-    public ResponseEntity<List<QuizSummaryDTO>> getQuizzesForTakingBySectionId(@PathVariable Long sectionId, @AuthenticationPrincipal UserDetails userDetails) {
-        Long userId = getUserIdFromPrincipal(userDetails);
-        List<QuizSummaryDTO> quizzes = quizService.getAvailableQuizzesForStudent(sectionId, userId);
-        return ResponseEntity.ok(quizzes);
-    }
-
-    @GetMapping("/{quizId}/take")
-    public ResponseEntity<QuizDTO> getQuizForTaking(@PathVariable Long quizId) {
-        QuizDTO quizDTO = quizService.getQuizForStudent(quizId);
-        return ResponseEntity.ok(quizDTO);
-    }
-
-    @GetMapping("/{quizId}/questions/student")
-    public ResponseEntity<List<QuestionDTO>> getQuestionsForStudent(@PathVariable Long quizId) {
-        List<QuestionDTO> questions = quizService.getQuestionsForStudent(quizId);
-        return ResponseEntity.ok(questions);
-    }
-
-    // ==================== LÀM BÀI THI ====================
-
-    @PostMapping("/{quizId}/start")
-    public ResponseEntity<TestResultDTO> startQuiz(@PathVariable Long quizId, @AuthenticationPrincipal UserDetails userDetails) {
-        Long userId = getUserIdFromPrincipal(userDetails);
-        TestResultDTO result = quizService.startQuiz(quizId, userId);
-        return ResponseEntity.ok(result);
-    }
-
-    @PostMapping("/{quizId}/submit")
-    public ResponseEntity<TestResultDTO> submitQuiz(@PathVariable Long quizId, @Valid @RequestBody QuizSubmissionRequest request, @AuthenticationPrincipal UserDetails userDetails) {
-        Long userId = getUserIdFromPrincipal(userDetails);
-        TestResultDTO result = quizService.submitQuiz(quizId, request, userId);
-        return ResponseEntity.ok(result);
-    }
-
-    @GetMapping("/{quizId}/status")
-    public ResponseEntity<QuizStatusDTO> getQuizStatus(@PathVariable Long quizId, @AuthenticationPrincipal UserDetails userDetails) {
-        Long userId = getUserIdFromPrincipal(userDetails);
-        QuizStatusDTO status = quizService.getQuizStatusForStudent(quizId, userId);
-        return ResponseEntity.ok(status);
-    }
-
-    // ==================== KẾT QUẢ ====================
-
-    @GetMapping("/results/{resultId}")
-    public ResponseEntity<TestResultDTO> getQuizResult(@PathVariable Long resultId) {
-        TestResultDTO result = quizService.getQuizResult(resultId);
-        return ResponseEntity.ok(result);
-    }
-
-    @GetMapping("/results/{resultId}/student")
-    public ResponseEntity<QuizResultDetailDTO> getQuizResultForStudent(@PathVariable Long resultId, @AuthenticationPrincipal UserDetails userDetails) {
-        Long userId = getUserIdFromPrincipal(userDetails);
-        QuizResultDetailDTO result = quizService.getQuizResultForStudent(resultId, userId);
-        return ResponseEntity.ok(result);
-    }
-
-    @GetMapping("/results/{resultId}/teacher")
-    @PreAuthorize("hasAnyRole('CONTENT_MANAGER', 'ADMIN')")
-    public ResponseEntity<QuizResultDetailDTO> getQuizResultForTeacher(@PathVariable Long resultId) {
-        QuizResultDetailDTO result = quizService.getQuizResultForTeacher(resultId);
-        return ResponseEntity.ok(result);
-
-
-    }
-
-    // Endpoint mới cho admin để lấy trạng thái quiz của một user cụ thể
-    @GetMapping("/{quizId}/user/{userId}/status")
-    @PreAuthorize("hasAnyRole('CONTENT_MANAGER', 'ADMIN')")
-    public ResponseEntity<QuizStatusDTO> getQuizStatusForUser(@PathVariable Long quizId, @PathVariable Long userId) {
-        // Tái sử dụng service method `getQuizStatusForStudent` đã có
-        QuizStatusDTO status = quizService.getQuizStatusForStudent(quizId, userId);
-        return ResponseEntity.ok(status);
-    }
-
-    @GetMapping("/my-results")
-    public ResponseEntity<List<TestResultDTO>> getUserQuizResults(@AuthenticationPrincipal UserDetails userDetails) {
-        Long userId = getUserIdFromPrincipal(userDetails);
-        List<TestResultDTO> results = quizService.getUserQuizHistory(userId);
-        return ResponseEntity.ok(results);
-    }
-
-    @GetMapping("/{quizId}/results")
-    @PreAuthorize("hasAnyRole('CONTENT_MANAGER', 'ADMIN')")
-    public ResponseEntity<List<TestResultDTO>> getQuizResults(@PathVariable Long quizId) {
-        List<TestResultDTO> results = quizService.getQuizResults(quizId);
-        return ResponseEntity.ok(results);
-    }
-
-    @GetMapping("/{quizId}/statistics")
-    @PreAuthorize("hasAnyRole('CONTENT_MANAGER', 'ADMIN')")
-    public ResponseEntity<QuizStatisticsDTO> getQuizStatistics(@PathVariable Long quizId) {
-        QuizStatisticsDTO statistics = quizService.getQuizStatistics(quizId);
-        return ResponseEntity.ok(statistics);
     }
 
     // ==================== QUẢN LÝ CÂU HỎI (ADMIN) ====================
@@ -203,16 +103,15 @@ public class QuizController {
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/{quizId}/questions")
+    @GetMapping("/{quizId}/questions/admin")
     @PreAuthorize("hasAnyRole('CONTENT_MANAGER', 'ADMIN')")
-    public ResponseEntity<List<QuestionDTO>> getQuestionsByQuizId(@PathVariable Long quizId) {
+    public ResponseEntity<List<QuestionDTO>> getQuestionsForAdmin(@PathVariable Long quizId) {
         List<QuestionDTO> questions = quizService.getQuestionsForTeacher(quizId);
         return ResponseEntity.ok(questions);
     }
 
-    // ==================== QUẢN LÝ ĐÁP ÁN (OPTIONS) ====================
+    // ==================== QUẢN LÝ ĐÁP ÁN (ADMIN) ====================
 
-    // Thêm đáp án vào câu hỏi
     @PostMapping("/questions/{questionId}/options")
     @PreAuthorize("hasAnyRole('CONTENT_MANAGER', 'ADMIN')")
     public ResponseEntity<OptionDTO> addOptionToQuestion(@PathVariable Long questionId, @Valid @RequestBody OptionCreateRequest request) {
@@ -220,7 +119,6 @@ public class QuizController {
         return ResponseEntity.status(HttpStatus.CREATED).body(optionDTO);
     }
 
-    // Cập nhật đáp án
     @PutMapping("/options/{optionId}")
     @PreAuthorize("hasAnyRole('CONTENT_MANAGER', 'ADMIN')")
     public ResponseEntity<OptionDTO> updateOption(@PathVariable Long optionId, @Valid @RequestBody OptionUpdateRequest request) {
@@ -228,7 +126,6 @@ public class QuizController {
         return ResponseEntity.ok(optionDTO);
     }
 
-    // Xóa đáp án
     @DeleteMapping("/options/{optionId}")
     @PreAuthorize("hasAnyRole('CONTENT_MANAGER', 'ADMIN')")
     public ResponseEntity<Void> deleteOption(@PathVariable Long optionId) {
@@ -236,12 +133,176 @@ public class QuizController {
         return ResponseEntity.noContent().build();
     }
 
-    // Lấy danh sách đáp án của câu hỏi
     @GetMapping("/questions/{questionId}/options")
     @PreAuthorize("hasAnyRole('CONTENT_MANAGER', 'ADMIN')")
     public ResponseEntity<List<OptionDTO>> getOptionsByQuestionId(@PathVariable Long questionId) {
         List<OptionDTO> options = quizService.getOptionsByQuestionId(questionId);
         return ResponseEntity.ok(options);
+    }
+
+    // ==================== KẾT QUẢ & THỐNG KÊ (ADMIN) ====================
+
+    @GetMapping("/results/{resultId}/admin")
+    @PreAuthorize("hasAnyRole('CONTENT_MANAGER', 'ADMIN')")
+    public ResponseEntity<QuizResultDetailDTO> getQuizResultForAdmin(@PathVariable Long resultId) {
+        QuizResultDetailDTO result = quizService.getQuizResultForTeacher(resultId);
+        return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/{quizId}/user/{userId}/status")
+    @PreAuthorize("hasAnyRole('CONTENT_MANAGER', 'ADMIN')")
+    public ResponseEntity<QuizStatusDTO> getQuizStatusForUser(@PathVariable Long quizId, @PathVariable Long userId) {
+        QuizStatusDTO status = quizService.getQuizStatusForStudent(quizId, userId);
+        return ResponseEntity.ok(status);
+    }
+
+    @GetMapping("/{quizId}/results")
+    @PreAuthorize("hasAnyRole('CONTENT_MANAGER', 'ADMIN')")
+    public ResponseEntity<List<TestResultDTO>> getQuizResults(@PathVariable Long quizId) {
+        List<TestResultDTO> results = quizService.getQuizResults(quizId);
+        return ResponseEntity.ok(results);
+    }
+
+    @GetMapping("/{quizId}/statistics")
+    @PreAuthorize("hasAnyRole('CONTENT_MANAGER', 'ADMIN')")
+    public ResponseEntity<QuizStatisticsDTO> getQuizStatistics(@PathVariable Long quizId) {
+        QuizStatisticsDTO statistics = quizService.getQuizStatistics(quizId);
+        return ResponseEntity.ok(statistics);
+    }
+
+    // ==================== TIẾN ĐỘ QUIZ THEO COURSE (ADMIN) ====================
+
+    @GetMapping("/admin/course/{courseId}/user/{userId}/progress")
+    @PreAuthorize("hasAnyRole('CONTENT_MANAGER', 'ADMIN')")
+    public ResponseEntity<List<UserQuizProgressInCourseDTO>> getUserQuizProgressInCourseForAdmin(
+            @PathVariable Long courseId,
+            @PathVariable Long userId) {
+        List<UserQuizProgressInCourseDTO> progress = quizService.getUserQuizProgressInCourse(userId, courseId);
+        return ResponseEntity.ok(progress);
+    }
+
+    @GetMapping("/admin/course/{courseId}/user/{userId}/progress/summary")
+    @PreAuthorize("hasAnyRole('CONTENT_MANAGER', 'ADMIN')")
+    public ResponseEntity<UserQuizProgressSummaryDTO> getUserQuizProgressSummaryForAdmin(
+            @PathVariable Long courseId,
+            @PathVariable Long userId) {
+        UserQuizProgressSummaryDTO summary = quizService.getUserQuizProgressSummary(userId, courseId);
+        return ResponseEntity.ok(summary);
+    }
+
+    @GetMapping("/admin/course/{courseId}/all-users-progress")
+    @PreAuthorize("hasAnyRole('CONTENT_MANAGER', 'ADMIN')")
+    public ResponseEntity<List<UserQuizProgressSummaryDTO>> getAllUsersQuizProgressInCourse(
+            @PathVariable Long courseId) {
+        List<UserQuizProgressSummaryDTO> allProgress = quizService.getAllUsersQuizProgressInCourse(courseId);
+        return ResponseEntity.ok(allProgress);
+    }
+
+    // ==================== USER APIs ====================
+    // (Tất cả authenticated users)
+
+    // ==================== XEM QUIZ ====================
+
+    @GetMapping("/section/{sectionId}")
+    public ResponseEntity<List<QuizSummaryDTO>> getQuizzesBySectionId(@PathVariable Long sectionId) {
+        List<QuizSummaryDTO> quizzes = quizService.getQuizzesBySectionId(sectionId);
+        return ResponseEntity.ok(quizzes);
+    }
+
+    @GetMapping("/section/{sectionId}/take")
+    public ResponseEntity<List<QuizSummaryDTO>> getQuizzesForTakingBySectionId(
+            @PathVariable Long sectionId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        Long userId = getUserIdFromPrincipal(userDetails);
+        List<QuizSummaryDTO> quizzes = quizService.getAvailableQuizzesForStudent(sectionId, userId);
+        return ResponseEntity.ok(quizzes);
+    }
+
+    @GetMapping("/{quizId}")
+    public ResponseEntity<QuizDTO> getQuizForTaking(@PathVariable Long quizId) {
+        QuizDTO quizDTO = quizService.getQuizForStudent(quizId);
+        return ResponseEntity.ok(quizDTO);
+    }
+
+    @GetMapping("/{quizId}/questions")
+    public ResponseEntity<List<QuestionDTO>> getQuestionsForStudent(@PathVariable Long quizId) {
+        List<QuestionDTO> questions = quizService.getQuestionsForStudent(quizId);
+        return ResponseEntity.ok(questions);
+    }
+
+    // ==================== LÀM BÀI THI ====================
+
+    @PostMapping("/{quizId}/start")
+    public ResponseEntity<TestResultDTO> startQuiz(
+            @PathVariable Long quizId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        Long userId = getUserIdFromPrincipal(userDetails);
+        TestResultDTO result = quizService.startQuiz(quizId, userId);
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/{quizId}/submit")
+    public ResponseEntity<TestResultDTO> submitQuiz(
+            @PathVariable Long quizId,
+            @Valid @RequestBody QuizSubmissionRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        Long userId = getUserIdFromPrincipal(userDetails);
+        TestResultDTO result = quizService.submitQuiz(quizId, request, userId);
+        return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/{quizId}/status")
+    public ResponseEntity<QuizStatusDTO> getQuizStatus(
+            @PathVariable Long quizId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        Long userId = getUserIdFromPrincipal(userDetails);
+        QuizStatusDTO status = quizService.getQuizStatusForStudent(quizId, userId);
+        return ResponseEntity.ok(status);
+    }
+
+    // ==================== XEM KẾT QUẢ ====================
+
+    @GetMapping("/results/{resultId}")
+    public ResponseEntity<TestResultDTO> getQuizResult(@PathVariable Long resultId) {
+        TestResultDTO result = quizService.getQuizResult(resultId);
+        return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/results/{resultId}/student")
+    public ResponseEntity<QuizResultDetailDTO> getQuizResultForStudent(
+            @PathVariable Long resultId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        Long userId = getUserIdFromPrincipal(userDetails);
+        QuizResultDetailDTO result = quizService.getQuizResultForStudent(resultId, userId);
+        return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/my-results")
+    public ResponseEntity<List<TestResultDTO>> getUserQuizResults(
+            @AuthenticationPrincipal UserDetails userDetails) {
+        Long userId = getUserIdFromPrincipal(userDetails);
+        List<TestResultDTO> results = quizService.getUserQuizHistory(userId);
+        return ResponseEntity.ok(results);
+    }
+
+    // ==================== TIẾN ĐỘ QUIZ THEO COURSE (USER) ====================
+
+    @GetMapping("/course/{courseId}/user-progress")
+    public ResponseEntity<List<UserQuizProgressInCourseDTO>> getUserQuizProgressInCourse(
+            @PathVariable Long courseId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        Long userId = getUserIdFromPrincipal(userDetails);
+        List<UserQuizProgressInCourseDTO> progress = quizService.getUserQuizProgressInCourse(userId, courseId);
+        return ResponseEntity.ok(progress);
+    }
+
+    @GetMapping("/course/{courseId}/user-progress/summary")
+    public ResponseEntity<UserQuizProgressSummaryDTO> getUserQuizProgressSummary(
+            @PathVariable Long courseId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        Long userId = getUserIdFromPrincipal(userDetails);
+        UserQuizProgressSummaryDTO summary = quizService.getUserQuizProgressSummary(userId, courseId);
+        return ResponseEntity.ok(summary);
     }
 
     // ==================== KIỂM TRA ====================
@@ -259,7 +320,9 @@ public class QuizController {
     }
 
     @GetMapping("/{quizId}/can-access")
-    public ResponseEntity<Boolean> canUserAccessQuiz(@PathVariable Long quizId, @AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<Boolean> canUserAccessQuiz(
+            @PathVariable Long quizId,
+            @AuthenticationPrincipal UserDetails userDetails) {
         Long userId = getUserIdFromPrincipal(userDetails);
         boolean canAccess = quizService.canUserAccessQuiz(quizId, userId);
         return ResponseEntity.ok(canAccess);
