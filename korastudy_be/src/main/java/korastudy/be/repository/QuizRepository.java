@@ -90,4 +90,12 @@ public interface QuizRepository extends JpaRepository<Quiz, Long> {
      * Tìm quiz theo section với phân trang
      */
     Page<Quiz> findBySectionId(Long sectionId, Pageable pageable);
+
+    /**
+     * Lấy tất cả quizzes đã published trong một course
+     */
+    @Query("SELECT q FROM Quiz q WHERE q.section.course.id = :courseId " +
+            "AND q.isPublished = true " +
+            "ORDER BY q.section.orderIndex ASC, q.id ASC")
+    List<Quiz> findPublishedByCourseId(@Param("courseId") Long courseId);
 }
