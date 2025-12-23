@@ -31,19 +31,36 @@ public class GeminiService {
 
     private final RestTemplate restTemplate;
     private final RAGService ragService;
+    
+    /**
+     * Response chứa cả message và sources
+     */
+    public static class AIResponse {
+        private String message;
+        private List<Map<String, Object>> sources;
+        
+        public AIResponse(String message, List<Map<String, Object>> sources) {
+            this.message = message;
+            this.sources = sources != null ? sources : new ArrayList<>();
+        }
+        
+        public String getMessage() { return message; }
+        public List<Map<String, Object>> getSources() { return sources; }
+    }
 
     /**
-     * Tạo response từ Gemini AI hoặc RAG
+     * Tạo response từ Gemini AI hoặc RAG (trả về cả sources)
      */
-    public String generateResponse(String message, List<ChatRequest.ConversationMessage> conversationHistory) {
+    public AIResponse generateResponseWithSources(String message, List<ChatRequest.ConversationMessage> conversationHistory) {
         try {
             // Kiểm tra xem có dùng RAG không
             if (ragEnabled && ragService.isServiceAvailable()) {
                 log.info("Using RAG for response generation");
-                return generateResponseWithRAG(message, conversationHistory);
+                return generateResponseWithRAGAndSources(message, conversationHistory);
             } else {
                 log.info("Using direct Gemini API");
-                return generateResponseWithGemini(message, conversationHistory);
+                String response = generateResponseWithGemini(message, conversationHistory);
+                return new AIResponse(response, new ArrayList<>());
             }
             
         } catch (Exception e) {
@@ -51,11 +68,18 @@ public class GeminiService {
             throw new RuntimeException("Lỗi khi tạo phản hồi: " + e.getMessage());
         }
     }
+
+    /**
+     * Tạo response từ Gemini AI hoặc RAG (backward compatible)
+     */
+    public String generateResponse(String message, List<ChatRequest.ConversationMessage> conversationHistory) {
+        return generateResponseWithSources(message, conversationHistory).getMessage();
+    }
     
     /**
-     * Tạo response sử dụng RAG
+     * Tạo response sử dụng RAG với sources
      */
-    private String generateResponseWithRAG(String message, List<ChatRequest.ConversationMessage> conversationHistory) {
+    private AIResponse generateResponseWithRAGAndSources(String message, List<ChatRequest.ConversationMessage> conversationHistory) {
         try {
             // Convert conversation history sang format cho RAG
             List<Map<String, String>> history = conversationHistory != null ? 
@@ -69,14 +93,23 @@ public class GeminiService {
                     .collect(Collectors.toList()) :
                 new ArrayList<>();
             
-            // Gọi RAG service
-            return ragService.queryRAG(message, history);
+            // Gọi RAG service và lấy cả sources
+            RAGService.RAGResponse ragResponse = ragService.queryRAGWithSources(message, history);
+            return new AIResponse(ragResponse.getAnswer(), ragResponse.getSources());
             
         } catch (Exception e) {
             log.error("Error calling RAG, falling back to direct Gemini", e);
             // Fallback to direct Gemini nếu RAG lỗi
-            return generateResponseWithGemini(message, conversationHistory);
+            String response = generateResponseWithGemini(message, conversationHistory);
+            return new AIResponse(response, new ArrayList<>());
         }
+    }
+    
+    /**
+     * Tạo response sử dụng RAG (backward compatible)
+     */
+    private String generateResponseWithRAG(String message, List<ChatRequest.ConversationMessage> conversationHistory) {
+        return generateResponseWithRAGAndSources(message, conversationHistory).getMessage();
     }
     
     /**
