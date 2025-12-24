@@ -1,6 +1,7 @@
 package korastudy.be.dto.response.payment;
 
 
+import jdk.jshell.Snippet;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -18,4 +19,5 @@ public class PaymentResponse {
     private String buyerPhone;
     private Long userId;
     private Long courseId;
+
 }

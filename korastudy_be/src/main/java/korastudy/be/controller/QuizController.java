@@ -16,7 +16,10 @@ import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
 
+import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/quizzes")
@@ -196,6 +199,31 @@ public class QuizController {
             @PathVariable Long courseId) {
         List<UserQuizProgressSummaryDTO> allProgress = quizService.getAllUsersQuizProgressInCourse(courseId);
         return ResponseEntity.ok(allProgress);
+    }
+
+    @GetMapping("/admin/course/{courseId}/user/{userId}/average-score/detailed")
+    @PreAuthorize("hasAnyRole('CONTENT_MANAGER', 'ADMIN')")
+    public ResponseEntity<UserQuizDetailedAverageScoreDTO> getUserDetailedAverageScoreInCourse(
+            @PathVariable Long courseId,
+            @PathVariable Long userId) {
+        UserQuizDetailedAverageScoreDTO averageScore = quizService.getUserDetailedAverageScoreInCourse(userId, courseId);
+        return ResponseEntity.ok(averageScore);
+    }
+
+    @GetMapping("/admin/course/{courseId}/user/{userId}/average-score/simple")
+    @PreAuthorize("hasAnyRole('CONTENT_MANAGER', 'ADMIN')")
+    public ResponseEntity<Map<String, Object>> getUserSimpleAverageScoreInCourse(
+            @PathVariable Long courseId,
+            @PathVariable Long userId) {
+        Double averageScore = quizService.getUserSimpleAverageScoreInCourse(userId, courseId);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("userId", userId);
+        response.put("courseId", courseId);
+        response.put("averageScore", averageScore);
+        response.put("calculatedAt", LocalDateTime.now());
+
+        return ResponseEntity.ok(response);
     }
 
     // ==================== USER APIs ====================
