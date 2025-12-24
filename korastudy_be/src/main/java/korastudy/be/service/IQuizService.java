@@ -2,7 +2,6 @@ package korastudy.be.service;
 
 import korastudy.be.dto.request.quiz.*;
 import korastudy.be.dto.response.quiz.*;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -180,4 +179,8 @@ public interface IQuizService {
     UserQuizProgressSummaryDTO getUserQuizProgressSummary(Long userId, Long courseId);
 
     List<UserQuizProgressSummaryDTO> getAllUsersQuizProgressInCourse(Long courseId);
+
+    UserQuizDetailedAverageScoreDTO getUserDetailedAverageScoreInCourse(Long userId, Long courseId);
+
+    Double getUserSimpleAverageScoreInCourse(Long userId, Long courseId);
 }

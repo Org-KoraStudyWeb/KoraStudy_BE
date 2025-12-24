@@ -922,6 +922,146 @@ public class QuizService implements IQuizService {
         return result;
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public UserQuizDetailedAverageScoreDTO getUserDetailedAverageScoreInCourse(Long userId, Long courseId) {
+        log.info("Lấy điểm trung bình chi tiết của user {} trong course {}", userId, courseId);
+
+        // 1. Lấy tất cả quizzes trong course
+        List<Quiz> allQuizzes = quizRepository.findPublishedByCourseId(courseId);
+
+        if (allQuizzes.isEmpty()) {
+            return UserQuizDetailedAverageScoreDTO.builder()
+                    .userId(userId)
+                    .courseId(courseId)
+                    .overallAverageScore(0.0)
+                    .quizAverages(new ArrayList<>())
+                    .totalQuizzes(0)
+                    .attemptedQuizzes(0)
+                    .notAttemptedQuizzes(0)
+                    .lastUpdated(LocalDateTime.now())
+                    .message("Không có quiz nào published trong course")
+                    .build();
+        }
+
+        List<UserQuizDetailedAverageScoreDTO.QuizAverageScoreDTO> quizAverages = new ArrayList<>();
+        double totalQuizAverageScore = 0.0;  // Tổng điểm trung bình của các quiz
+        int attemptedQuizzes = 0;
+
+        // 2. Với mỗi quiz, tính điểm trung bình của tất cả lần thi
+        for (Quiz quiz : allQuizzes) {
+            // Lấy tất cả kết quả của user cho quiz này
+            List<TestResult> quizResults = testResultRepository.findByUserIdAndQuizIdOrderByTakenDateDesc(userId, quiz.getId());
+
+            UserQuizDetailedAverageScoreDTO.QuizAverageScoreDTO quizAverage = UserQuizDetailedAverageScoreDTO.QuizAverageScoreDTO.builder()
+                    .quizId(quiz.getId())
+                    .quizTitle(quiz.getTitle())
+                    .attemptCount(quizResults.size())
+                    .build();
+
+            if (!quizResults.isEmpty()) {
+                attemptedQuizzes++;
+
+                // Tính điểm trung bình của tất cả lần thi quiz này
+                double quizTotalScore = 0.0;
+                double bestScore = 0.0;
+                LocalDateTime firstAttempt = null;
+                LocalDateTime lastAttempt = null;
+
+                for (TestResult result : quizResults) {
+                    quizTotalScore += result.getScore();
+
+                    // Tìm điểm cao nhất
+                    if (result.getScore() > bestScore) {
+                        bestScore = result.getScore();
+                    }
+
+                    // Tìm lần thi đầu tiên và cuối cùng
+                    if (firstAttempt == null || result.getTakenDate().isBefore(firstAttempt)) {
+                        firstAttempt = result.getTakenDate();
+                    }
+                    if (lastAttempt == null || result.getTakenDate().isAfter(lastAttempt)) {
+                        lastAttempt = result.getTakenDate();
+                    }
+                }
+
+                double quizAverageScore = quizTotalScore / quizResults.size();
+
+                quizAverage.setAverageScore(Math.round(quizAverageScore * 100.0) / 100.0);
+                quizAverage.setBestScore(Math.round(bestScore * 100.0) / 100.0);
+                quizAverage.setFirstAttemptDate(firstAttempt);
+                quizAverage.setLastAttemptDate(lastAttempt);
+
+                // Cộng vào tổng điểm trung bình
+                totalQuizAverageScore += quizAverageScore;
+
+            } else {
+                // Quiz chưa làm - điểm trung bình = 0
+                quizAverage.setAverageScore(0.0);
+                quizAverage.setBestScore(0.0);
+            }
+
+            quizAverages.add(quizAverage);
+        }
+
+        // 3. Tính điểm trung bình tổng
+        double overallAverageScore = allQuizzes.size() > 0 ?
+                totalQuizAverageScore / allQuizzes.size() : 0.0;
+
+        return UserQuizDetailedAverageScoreDTO.builder()
+                .userId(userId)
+                .courseId(courseId)
+                .overallAverageScore(Math.round(overallAverageScore * 100.0) / 100.0)
+                .quizAverages(quizAverages)
+                .totalQuizzes(allQuizzes.size())
+                .attemptedQuizzes(attemptedQuizzes)
+                .notAttemptedQuizzes(allQuizzes.size() - attemptedQuizzes)
+                .lastUpdated(LocalDateTime.now())
+                .message("Lấy điểm trung bình thành công")
+                .build();
+    }
+
+
+    @Override
+    @Transactional(readOnly = true)
+    public Double getUserSimpleAverageScoreInCourse(Long userId, Long courseId) {
+        log.info("Lấy điểm trung bình đơn giản của user {} trong course {}", userId, courseId);
+
+        // 1. Lấy tất cả quizzes trong course
+        List<Quiz> allQuizzes = quizRepository.findPublishedByCourseId(courseId);
+
+        if (allQuizzes.isEmpty()) {
+            return 0.0;
+        }
+
+        double totalQuizAverageScore = 0.0;
+
+        // 2. Với mỗi quiz, tính điểm trung bình của tất cả lần thi
+        for (Quiz quiz : allQuizzes) {
+            // Lấy tất cả kết quả của user cho quiz này
+            List<TestResult> quizResults = testResultRepository.findByUserIdAndQuizId(userId, quiz.getId());
+
+            if (!quizResults.isEmpty()) {
+                // Tính điểm trung bình của tất cả lần thi quiz này
+                double quizTotalScore = 0.0;
+                for (TestResult result : quizResults) {
+                    double score = result.getScore() != null ? result.getScore() : 0.0;
+                    quizTotalScore += score;
+                }
+
+                double quizAverageScore = quizResults.size() > 0 ? quizTotalScore / quizResults.size() : 0.0;
+                totalQuizAverageScore += quizAverageScore;
+            }
+            // Quiz chưa làm thì không cộng gì (coi như 0 điểm)
+        }
+
+        // 3. Tính điểm trung bình tổng
+        double overallAverageScore = allQuizzes.size() > 0 ?
+                totalQuizAverageScore / allQuizzes.size() : 0.0;
+
+        return Math.round(overallAverageScore * 100.0) / 100.0;
+    }
+
     // ==================== PHƯƠNG THỨC HỖ TRỢ RIÊNG ====================
 
     /**
