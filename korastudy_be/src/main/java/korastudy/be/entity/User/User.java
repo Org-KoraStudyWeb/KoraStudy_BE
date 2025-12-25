@@ -60,10 +60,6 @@ public class User extends BaseTimeEntity {
     @Enumerated(EnumType.STRING)
     private Gender gender;
 
-    private String level;
-
-    private String idCard;
-
     private String avatar;
 
     private boolean isEnable;
