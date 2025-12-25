@@ -26,4 +26,11 @@ public interface LessonRepository extends JpaRepository<Lesson, Long> {
     Integer findMaxOrderIndexBySectionId(@Param("sectionId") Long sectionId);
 
     boolean existsBySectionIdAndOrderIndex(Long sectionId, Integer orderIndex);
+
+    @Query("SELECT l FROM Lesson l " +
+            "JOIN l.section s " +
+            "JOIN s.course c " +
+            "WHERE c.id = :courseId " +
+            "ORDER BY s.orderIndex ASC, l.orderIndex ASC")
+    List<Lesson> findAllByCourseId(@Param("courseId") Long courseId);
 }

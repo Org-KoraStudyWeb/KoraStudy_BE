@@ -1,5 +1,6 @@
 package korastudy.be.entity.Course;
 
+import korastudy.be.entity.BaseEntity.BaseTimeEntity;
 import korastudy.be.entity.Enum.EnrollmentStatus;
 import korastudy.be.entity.User.User;
 import jakarta.persistence.*;
@@ -16,7 +17,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Enrollment {
+public class Enrollment extends BaseTimeEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -60,6 +61,9 @@ public class Enrollment {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 
+    @Column(name = "completed_at")
+    private LocalDateTime completedAt;
+
     // ==================== METHODS ====================
     public boolean isActive() {
         return this.status == EnrollmentStatus.ACTIVE;
@@ -71,5 +75,12 @@ public class Enrollment {
 
     public boolean isExpired() {
         return this.expiryDate != null && LocalDate.now().isAfter(this.expiryDate);
+    }
+
+    public void markAsCompleted() {
+        this.status = EnrollmentStatus.COMPLETED;
+        this.progress = 100.0;
+        this.completedAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
     }
 }

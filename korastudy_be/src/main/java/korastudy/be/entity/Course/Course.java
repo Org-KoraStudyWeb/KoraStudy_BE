@@ -1,6 +1,7 @@
 package korastudy.be.entity.Course;
 
 import jakarta.persistence.*;
+import korastudy.be.entity.Certificate;
 import korastudy.be.entity.PaymentHistory;
 import lombok.*;
 
@@ -64,4 +65,7 @@ public class Course {
 
     @OneToMany(mappedBy = "course", cascade = CascadeType.REMOVE)
     private List<PaymentHistory> paymentHistories = new ArrayList<>();
+
+    @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<Certificate> certificates = new ArrayList<>();
 }
