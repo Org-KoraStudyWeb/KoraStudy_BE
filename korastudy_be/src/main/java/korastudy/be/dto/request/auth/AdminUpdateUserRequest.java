@@ -25,11 +25,7 @@ public class AdminUpdateUserRequest {
     private LocalDate dateOfBirth;
     
     private String avatar;
-    
-    private String level;
-    
-    private String idCard;
-    
+
     // Admin có thể update username (với validation)
     private String username;
 }

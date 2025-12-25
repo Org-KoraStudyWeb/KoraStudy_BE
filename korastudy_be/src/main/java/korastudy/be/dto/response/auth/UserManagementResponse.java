@@ -25,8 +25,6 @@ public class UserManagementResponse {
     private Gender gender;
     private LocalDate dateOfBirth;
     private String avatar;
-    private String level;
-    private String idCard;
     private Boolean isUserEnabled; // User.isEnable
     private Boolean isAccountEnabled; // Account.isEnabled
     private LocalDateTime createdAt;
@@ -49,8 +47,6 @@ public class UserManagementResponse {
                 .gender(user.getGender())
                 .dateOfBirth(user.getDob())
                 .avatar(user.getAvatar())
-                .level(user.getLevel())
-                .idCard(user.getIdCard())
                 .isUserEnabled(user.isEnable())
                 .isAccountEnabled(user.getAccount() != null ? user.getAccount().isEnabled() : false)
                 .createdAt(user.getCreatedAt())

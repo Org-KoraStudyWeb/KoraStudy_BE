@@ -96,9 +96,6 @@ public class AdminUserService implements IAdminUserService {
         if (request.getGender() != null) user.setGender(request.getGender());
         if (request.getDateOfBirth() != null) user.setDob(request.getDateOfBirth());
         if (request.getAvatar() != null) user.setAvatar(request.getAvatar());
-        if (request.getLevel() != null) user.setLevel(request.getLevel());
-        if (request.getIdCard() != null) user.setIdCard(request.getIdCard());
-
         // Cập nhật account info
         if (user.getAccount() != null) {
             Account account = user.getAccount();
