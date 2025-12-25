@@ -12,7 +12,10 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/**").allowedOrigins("http://localhost:3030", "http://localhost:8080", "http://localhost:3000").allowedMethods("*").allowedHeaders("*").allowCredentials(true);
+        registry.addMapping("/**").allowedOrigins("http://localhost:3030", "http://localhost:8080", "http://localhost:3000",
+                "https://witty-water-06494e100.6.azurestaticapps.net", //Trang server của user
+                "https://witty-mud-0560bb800.2.azurestaticapps.net" //Trang server của admin
+        ).allowedMethods("*").allowedHeaders("*").allowCredentials(true);
     }
 
     @Bean

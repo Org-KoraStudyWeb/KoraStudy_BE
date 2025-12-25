@@ -2,7 +2,6 @@ package korastudy.be.service;
 
 import korastudy.be.dto.request.quiz.*;
 import korastudy.be.dto.response.quiz.*;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -166,4 +165,22 @@ public interface IQuizService {
      * Kiểm tra user có quyền truy cập quiz không
      */
     boolean canUserAccessQuiz(Long quizId, Long userId);
+
+// ==================== TIẾN ĐỘ QUIZ THEO COURSE ====================
+
+    /**
+     * Lấy tiến độ quiz của user trong một course
+     */
+    List<UserQuizProgressInCourseDTO> getUserQuizProgressInCourse(Long userId, Long courseId);
+
+    /**
+     * Lấy thống kê tiến độ quiz của user trong course
+     */
+    UserQuizProgressSummaryDTO getUserQuizProgressSummary(Long userId, Long courseId);
+
+    List<UserQuizProgressSummaryDTO> getAllUsersQuizProgressInCourse(Long courseId);
+
+    UserQuizDetailedAverageScoreDTO getUserDetailedAverageScoreInCourse(Long userId, Long courseId);
+
+    Double getUserSimpleAverageScoreInCourse(Long userId, Long courseId);
 }

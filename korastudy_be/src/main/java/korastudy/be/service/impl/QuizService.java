@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
 public class QuizService implements IQuizService {
 
     private final QuizRepository quizRepository;
+    private final CourseRepository courseRepository;
     private final SectionRepository sectionRepository;
     private final QuestionRepository questionRepository;
     private final OptionRepository optionRepository;
@@ -740,6 +741,325 @@ public class QuizService implements IQuizService {
         if (quiz == null) return false;
 
         return quiz.getIsPublished() && quiz.getIsActive();
+    }
+
+    // ==================== Tiến độ ====================
+
+    // ==================== TIẾN ĐỘ QUIZ THEO COURSE ====================
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<UserQuizProgressInCourseDTO> getUserQuizProgressInCourse(Long userId, Long courseId) {
+        log.info("Lấy tiến độ quiz của user {} trong course {}", userId, courseId);
+
+        // 1. Lấy tất cả quizzes trong course (chỉ published)
+        List<Quiz> quizzes = quizRepository.findPublishedByCourseId(courseId);
+
+        if (quizzes.isEmpty()) {
+            log.info("Course {} không có quiz nào published", courseId);
+            return Collections.emptyList();
+        }
+
+        // 2. Với mỗi quiz, lấy trạng thái của user
+        List<UserQuizProgressInCourseDTO> result = new ArrayList<>();
+
+        for (Quiz quiz : quizzes) {
+            try {
+                // Lấy trạng thái quiz cho user này
+                QuizStatusDTO status = getQuizStatusForStudent(quiz.getId(), userId);
+
+                // Lấy kết quả tốt nhất (nếu có)
+                Optional<TestResult> bestResult = testResultRepository.findFirstByUserIdAndQuizIdOrderByScoreDesc(userId, quiz.getId());
+
+                // Lấy kết quả gần nhất
+                Optional<TestResult> latestResult = testResultRepository.findFirstByUserIdAndQuizIdOrderByTakenDateDesc(userId, quiz.getId());
+
+                // Tạo DTO
+                UserQuizProgressInCourseDTO dto = UserQuizProgressInCourseDTO.builder().quizId(quiz.getId()).quizTitle(quiz.getTitle()).sectionId(quiz.getSection().getId()).sectionTitle(quiz.getSection().getSectionName()).orderIndex(quiz.getSection() != null && quiz.getSection().getOrderIndex() != null ? quiz.getSection().getOrderIndex() : 0).passingScore(quiz.getPassingScore() != null ? quiz.getPassingScore().doubleValue() : 0.0).timeLimit(quiz.getTimeLimit()).isPublished(quiz.getIsPublished()).isCompleted(status.getIsCompleted()).isPassed(status.getIsPassed()).bestScore(status.getBestScore()).attemptCount(status.getAttemptCount()).lastAttemptDate(status.getLastAttemptDate()).build();
+
+                // Thêm thông tin chi tiết từ kết quả gần nhất
+                latestResult.ifPresent(latest -> {
+                    dto.setLatestScore(latest.getScore());
+                    dto.setTimeSpent(latest.getTimeSpent());
+                    dto.setTakenDate(latest.getTakenDate());
+                });
+
+                result.add(dto);
+
+            } catch (Exception e) {
+                log.warn("Không thể lấy trạng thái quiz {} cho user {}: {}", quiz.getId(), userId, e.getMessage());
+            }
+        }
+
+        // Sắp xếp theo section và order
+        result.sort(Comparator.comparing(UserQuizProgressInCourseDTO::getSectionId).thenComparing(UserQuizProgressInCourseDTO::getOrderIndex));
+
+        log.info("Tìm thấy {} quiz progress cho user {} trong course {}", result.size(), userId, courseId);
+
+        return result;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public UserQuizProgressSummaryDTO getUserQuizProgressSummary(Long userId, Long courseId) {
+        log.info("Lấy thống kê tiến độ quiz của user {} trong course {}", userId, courseId);
+
+        // 1. Lấy tất cả quizzes trong course
+        List<Quiz> allQuizzes = quizRepository.findByCourseId(courseId);
+        List<Quiz> publishedQuizzes = quizRepository.findPublishedByCourseId(courseId);
+
+        // 2. Lấy tiến độ chi tiết
+        List<UserQuizProgressInCourseDTO> progressList = getUserQuizProgressInCourse(userId, courseId);
+
+        // 3. Tính toán thống kê
+        int totalQuizzes = allQuizzes.size();
+        int publishedCount = publishedQuizzes.size();
+        int attempted = 0;
+        int passed = 0;
+        int failed = 0;
+        double totalScore = 0.0;
+        int scoredQuizzes = 0;
+        long totalTimeSpent = 0L;
+        LocalDateTime firstAttemptDate = null;
+        LocalDateTime lastAttemptDate = null;
+
+        for (UserQuizProgressInCourseDTO progress : progressList) {
+            if (progress.getIsCompleted() != null && progress.getIsCompleted()) {
+                attempted++;
+
+                if (Boolean.TRUE.equals(progress.getIsPassed())) {
+                    passed++;
+                } else {
+                    failed++;
+                }
+
+                // Tính điểm
+                if (progress.getBestScore() != null && progress.getBestScore() > 0) {
+                    totalScore += progress.getBestScore();
+                    scoredQuizzes++;
+                }
+
+                // Tính thời gian
+                if (progress.getTimeSpent() != null) {
+                    totalTimeSpent += progress.getTimeSpent();
+                }
+
+                // Tìm ngày đầu tiên và cuối cùng
+                if (progress.getLastAttemptDate() != null) {
+                    if (lastAttemptDate == null || progress.getLastAttemptDate().isAfter(lastAttemptDate)) {
+                        lastAttemptDate = progress.getLastAttemptDate();
+                    }
+                    if (firstAttemptDate == null || progress.getLastAttemptDate().isBefore(firstAttemptDate)) {
+                        firstAttemptDate = progress.getLastAttemptDate();
+                    }
+                }
+            }
+        }
+
+        int notStarted = publishedCount - attempted;
+
+        // Tính điểm trung bình
+        double averageScore = scoredQuizzes > 0 ? totalScore / scoredQuizzes : 0.0;
+
+        // Tính tỷ lệ
+        double passRate = publishedCount > 0 ? ((double) passed / publishedCount) * 100 : 0;
+        double completionRate = publishedCount > 0 ? ((double) attempted / publishedCount) * 100 : 0;
+
+        // Lấy thông tin user và course
+        User user = userRepository.findById(userId).orElse(null);
+        Course course = courseRepository.findById(courseId).orElse(null);
+
+        return UserQuizProgressSummaryDTO.builder().userId(userId).username(user != null && user.getAccount() != null ? user.getAccount().getUsername() : "").displayName(user != null ? user.getDisplayName() : "").courseId(courseId).courseTitle(course != null ? course.getCourseName() : "").totalQuizzes(totalQuizzes).publishedQuizzes(publishedCount).attemptedQuizzes(attempted).passedQuizzes(passed).failedQuizzes(failed).notStartedQuizzes(notStarted).averageScore(Math.round(averageScore * 100.0) / 100.0) // Làm tròn 2 số
+                .passRate(Math.round(passRate * 100.0) / 100.0).completionRate(Math.round(completionRate * 100.0) / 100.0).totalTimeSpent(totalTimeSpent).firstAttemptDate(firstAttemptDate).lastAttemptDate(lastAttemptDate).build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<UserQuizProgressSummaryDTO> getAllUsersQuizProgressInCourse(Long courseId) {
+        log.info("Lấy tiến độ quiz của tất cả users trong course {}", courseId);
+
+        // 1. Kiểm tra course có tồn tại
+        Course course = courseRepository.findById(courseId).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy course với ID: " + courseId));
+
+        // 2. Lấy tất cả users đã làm quiz trong course này
+        List<Long> userIds = testResultRepository.findDistinctUserIdsByCourseId(courseId);
+
+        if (userIds.isEmpty()) {
+            log.info("Không có user nào làm quiz trong course {}", courseId);
+            return Collections.emptyList();
+        }
+
+        // 3. Với mỗi user, lấy thống kê
+        List<UserQuizProgressSummaryDTO> result = new ArrayList<>();
+
+        for (Long userId : userIds) {
+            try {
+                // Lấy thông tin user
+                User user = userRepository.findById(userId).orElse(null);
+                if (user == null) continue;
+
+                // Lấy thống kê tiến độ
+                UserQuizProgressSummaryDTO summary = getUserQuizProgressSummary(userId, courseId);
+
+                // Cập nhật thông tin user (nếu chưa có)
+                if (summary.getUsername() == null || summary.getUsername().isEmpty()) {
+                    summary.setUsername(user.getAccount() != null ? user.getAccount().getUsername() : "");
+                    summary.setDisplayName(user.getDisplayName());
+                }
+
+                result.add(summary);
+
+            } catch (Exception e) {
+                log.warn("Không thể lấy thống kê cho user {} trong course {}: {}", userId, courseId, e.getMessage());
+            }
+        }
+
+        // 4. Sắp xếp theo tỷ lệ hoàn thành giảm dần
+        result.sort(Comparator.comparing(UserQuizProgressSummaryDTO::getCompletionRate).reversed().thenComparing(UserQuizProgressSummaryDTO::getAverageScore).reversed());
+
+        log.info("Tìm thấy thống kê của {} users trong course {}", result.size(), courseId);
+
+        return result;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public UserQuizDetailedAverageScoreDTO getUserDetailedAverageScoreInCourse(Long userId, Long courseId) {
+        log.info("Lấy điểm trung bình chi tiết của user {} trong course {}", userId, courseId);
+
+        // 1. Lấy tất cả quizzes trong course
+        List<Quiz> allQuizzes = quizRepository.findPublishedByCourseId(courseId);
+
+        if (allQuizzes.isEmpty()) {
+            return UserQuizDetailedAverageScoreDTO.builder()
+                    .userId(userId)
+                    .courseId(courseId)
+                    .overallAverageScore(0.0)
+                    .quizAverages(new ArrayList<>())
+                    .totalQuizzes(0)
+                    .attemptedQuizzes(0)
+                    .notAttemptedQuizzes(0)
+                    .lastUpdated(LocalDateTime.now())
+                    .message("Không có quiz nào published trong course")
+                    .build();
+        }
+
+        List<UserQuizDetailedAverageScoreDTO.QuizAverageScoreDTO> quizAverages = new ArrayList<>();
+        double totalQuizAverageScore = 0.0;  // Tổng điểm trung bình của các quiz
+        int attemptedQuizzes = 0;
+
+        // 2. Với mỗi quiz, tính điểm trung bình của tất cả lần thi
+        for (Quiz quiz : allQuizzes) {
+            // Lấy tất cả kết quả của user cho quiz này
+            List<TestResult> quizResults = testResultRepository.findByUserIdAndQuizIdOrderByTakenDateDesc(userId, quiz.getId());
+
+            UserQuizDetailedAverageScoreDTO.QuizAverageScoreDTO quizAverage = UserQuizDetailedAverageScoreDTO.QuizAverageScoreDTO.builder()
+                    .quizId(quiz.getId())
+                    .quizTitle(quiz.getTitle())
+                    .attemptCount(quizResults.size())
+                    .build();
+
+            if (!quizResults.isEmpty()) {
+                attemptedQuizzes++;
+
+                // Tính điểm trung bình của tất cả lần thi quiz này
+                double quizTotalScore = 0.0;
+                double bestScore = 0.0;
+                LocalDateTime firstAttempt = null;
+                LocalDateTime lastAttempt = null;
+
+                for (TestResult result : quizResults) {
+                    quizTotalScore += result.getScore();
+
+                    // Tìm điểm cao nhất
+                    if (result.getScore() > bestScore) {
+                        bestScore = result.getScore();
+                    }
+
+                    // Tìm lần thi đầu tiên và cuối cùng
+                    if (firstAttempt == null || result.getTakenDate().isBefore(firstAttempt)) {
+                        firstAttempt = result.getTakenDate();
+                    }
+                    if (lastAttempt == null || result.getTakenDate().isAfter(lastAttempt)) {
+                        lastAttempt = result.getTakenDate();
+                    }
+                }
+
+                double quizAverageScore = quizTotalScore / quizResults.size();
+
+                quizAverage.setAverageScore(Math.round(quizAverageScore * 100.0) / 100.0);
+                quizAverage.setBestScore(Math.round(bestScore * 100.0) / 100.0);
+                quizAverage.setFirstAttemptDate(firstAttempt);
+                quizAverage.setLastAttemptDate(lastAttempt);
+
+                // Cộng vào tổng điểm trung bình
+                totalQuizAverageScore += quizAverageScore;
+
+            } else {
+                // Quiz chưa làm - điểm trung bình = 0
+                quizAverage.setAverageScore(0.0);
+                quizAverage.setBestScore(0.0);
+            }
+
+            quizAverages.add(quizAverage);
+        }
+
+        // 3. Tính điểm trung bình tổng
+        double overallAverageScore = allQuizzes.size() > 0 ?
+                totalQuizAverageScore / allQuizzes.size() : 0.0;
+
+        return UserQuizDetailedAverageScoreDTO.builder()
+                .userId(userId)
+                .courseId(courseId)
+                .overallAverageScore(Math.round(overallAverageScore * 100.0) / 100.0)
+                .quizAverages(quizAverages)
+                .totalQuizzes(allQuizzes.size())
+                .attemptedQuizzes(attemptedQuizzes)
+                .notAttemptedQuizzes(allQuizzes.size() - attemptedQuizzes)
+                .lastUpdated(LocalDateTime.now())
+                .message("Lấy điểm trung bình thành công")
+                .build();
+    }
+
+
+    @Override
+    @Transactional(readOnly = true)
+    public Double getUserSimpleAverageScoreInCourse(Long userId, Long courseId) {
+        log.info("Lấy điểm trung bình đơn giản của user {} trong course {}", userId, courseId);
+
+        // 1. Lấy tất cả quizzes trong course
+        List<Quiz> allQuizzes = quizRepository.findPublishedByCourseId(courseId);
+
+        if (allQuizzes.isEmpty()) {
+            return 0.0;
+        }
+
+        double totalQuizAverageScore = 0.0;
+
+        // 2. Với mỗi quiz, tính điểm trung bình của tất cả lần thi
+        for (Quiz quiz : allQuizzes) {
+            // Lấy tất cả kết quả của user cho quiz này
+            List<TestResult> quizResults = testResultRepository.findByUserIdAndQuizId(userId, quiz.getId());
+
+            if (!quizResults.isEmpty()) {
+                // Tính điểm trung bình của tất cả lần thi quiz này
+                double quizTotalScore = 0.0;
+                for (TestResult result : quizResults) {
+                    double score = result.getScore() != null ? result.getScore() : 0.0;
+                    quizTotalScore += score;
+                }
+
+                double quizAverageScore = quizResults.size() > 0 ? quizTotalScore / quizResults.size() : 0.0;
+                totalQuizAverageScore += quizAverageScore;
+            }
+            // Quiz chưa làm thì không cộng gì (coi như 0 điểm)
+        }
+
+        // 3. Tính điểm trung bình tổng
+        double overallAverageScore = allQuizzes.size() > 0 ?
+                totalQuizAverageScore / allQuizzes.size() : 0.0;
+
+        return Math.round(overallAverageScore * 100.0) / 100.0;
     }
 
     // ==================== PHƯƠNG THỨC HỖ TRỢ RIÊNG ====================

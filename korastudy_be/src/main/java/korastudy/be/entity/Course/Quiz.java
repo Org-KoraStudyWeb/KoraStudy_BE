@@ -47,4 +47,5 @@ public class Quiz extends BaseTimeEntity {
 
     @OneToMany(mappedBy = "quiz", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<TestResult> results;
+
 }

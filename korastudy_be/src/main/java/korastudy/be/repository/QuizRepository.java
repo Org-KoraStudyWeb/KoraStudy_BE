@@ -65,7 +65,10 @@ public interface QuizRepository extends JpaRepository<Quiz, Long> {
     /**
      * Tìm tất cả quiz theo course ID
      */
-    @Query("SELECT q FROM Quiz q WHERE q.section.course.id = :courseId")
+    @Query("SELECT q FROM Quiz q " +
+            "JOIN q.section s " +
+            "JOIN s.course c " +
+            "WHERE c.id = :courseId")
     List<Quiz> findByCourseId(@Param("courseId") Long courseId);
 
     /**
@@ -80,14 +83,15 @@ public interface QuizRepository extends JpaRepository<Quiz, Long> {
     @Query("SELECT q FROM Quiz q JOIN q.questions ques WHERE ques.id = :questionId")
     Optional<Quiz> findByQuestionId(@Param("questionId") Long questionId);
 
-    /**
-     * Tìm quiz cùng với section và course info
-     */
-    @Query("SELECT q FROM Quiz q JOIN FETCH q.section s JOIN FETCH s.course WHERE q.id = :quizId")
-    Optional<Quiz> findByIdWithSectionAndCourse(@Param("quizId") Long quizId);
 
     /**
-     * Tìm quiz theo section với phân trang
+     * Lấy tất cả quizzes đã published trong một course
      */
-    Page<Quiz> findBySectionId(Long sectionId, Pageable pageable);
+    @Query("SELECT q FROM Quiz q " +
+            "JOIN q.section s " +
+            "JOIN s.course c " +
+            "WHERE c.id = :courseId AND q.isPublished = true")
+    List<Quiz> findPublishedByCourseId(@Param("courseId") Long courseId);
+
+
 }
