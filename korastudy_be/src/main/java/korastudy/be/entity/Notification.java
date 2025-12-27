@@ -18,7 +18,7 @@ public class Notification {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(columnDefinition = "NVARCHAR(MAX)")
+    @Column(columnDefinition = "NVARCHAR(100)")
     private String title;
 
     @Column(columnDefinition = "NVARCHAR(MAX)")

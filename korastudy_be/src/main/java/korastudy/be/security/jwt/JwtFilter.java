@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import korastudy.be.security.userprinciple.AccountDetailsServiceImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -15,6 +16,8 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -25,7 +28,9 @@ public class JwtFilter extends OncePerRequestFilter {
     private final AccountDetailsServiceImpl userDetailsService;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    FilterChain filterChain) throws ServletException, IOException {
 
         String jwt = parseJwt(request);
 
@@ -33,14 +38,16 @@ public class JwtFilter extends OncePerRequestFilter {
             String username = jwtUtils.getUsernameFromJwtToken(jwt);
             UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
-            if (SecurityContextHolder.getContext().getAuthentication() == null) {
-                UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+            if (userDetails != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                UsernamePasswordAuthenticationToken auth =
+                        new UsernamePasswordAuthenticationToken(
+                                userDetails,
+                                null,
+                                userDetails.getAuthorities()
+                        );
                 SecurityContextHolder.getContext().setAuthentication(auth);
+                log.debug("✅ JWT valid for user: {}", username);
             }
-
-            log.debug("✅ JWT valid for user: {}", username);
-        } else {
-            log.debug("No valid JWT for request {}", request.getRequestURI());
         }
 
         filterChain.doFilter(request, response);
@@ -57,6 +64,38 @@ public class JwtFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getServletPath();
-        return path.startsWith("/api/v1/auth/") || path.startsWith("/api/v1/payments/vnpay-return") || path.startsWith("/api/v1/payments/callback") || path.startsWith("/swagger-ui") || path.startsWith("/v3/api-docs") || path.startsWith("/ws") || path.startsWith("/error");
+        String method = request.getMethod();
+
+        // Các endpoint KHÔNG cần JWT filter
+        List<String> publicPaths = Arrays.asList(
+                "/api/v1/auth/",
+                "/swagger-ui",
+                "/v3/api-docs",
+                "/error",
+                "/ws",
+                "/api/v1/payments/vnpay-return",
+                "/api/v1/payments/callback",
+                "/api/v1/payments/notify",
+                "/api/v1/certificates/public/verify",
+                "/api/flashcards/system"
+        );
+
+        // Kiểm tra public paths
+        for (String publicPath : publicPaths) {
+            if (path.startsWith(publicPath)) {
+                return true;
+            }
+        }
+
+        // PUBLIC GET endpoints cho review
+        if (HttpMethod.GET.matches(method)) {
+            if (path.startsWith("/api/v1/reviews/courses/") ||
+                    path.startsWith("/api/v1/reviews/mock-tests/") ||
+                    path.startsWith("/api/v1/courses/")) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

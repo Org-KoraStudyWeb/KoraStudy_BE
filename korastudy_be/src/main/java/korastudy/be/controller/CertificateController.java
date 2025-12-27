@@ -10,6 +10,7 @@ import korastudy.be.repository.UserRepository;
 import korastudy.be.service.impl.CourseCompletionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -171,68 +172,89 @@ public class CertificateController {
     }
 
     /**
-     * ⭐ FIX: Endpoint quan trọng nhất - claim certificate
+     * Endpoint quan trọng nhất - claim certificate
      */
     @PostMapping("/courses/{courseId}/claim")
-    public ResponseEntity<?> claimCertificate(@AuthenticationPrincipal UserDetails userDetails, @PathVariable Long courseId) {
+    public ResponseEntity<?> claimCertificate(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long courseId) {
 
         Long userId = getUserId(userDetails);
+        String lockKey = "cert_claim_" + userId + "_" + courseId;
 
-        log.info("🎓 User {} claiming certificate for course {}", userId, courseId);
+        synchronized (lockKey.intern()) {  // 🔒 Lock theo user + course
+            log.info("🎓 User {} claiming certificate for course {}", userId, courseId);
 
-        try {
-            // Kiểm tra điều kiện trước
-            if (!courseCompletionService.isEligibleForCertificate(userId, courseId)) {
+            try {
+                // Check lại trong lock
+                if (courseCompletionService.hasCertificate(userId, courseId)) {
+                    Optional<Certificate> existingCert =
+                            courseCompletionService.getUserCertificate(userId, courseId);
+
+                    if (existingCert.isPresent()) {
+                        CertificateDTO certificateDTO =
+                                courseCompletionService.convertToDTO(existingCert.get());
+
+                        Map<String, Object> response = new HashMap<>();
+                        response.put("success", true);
+                        response.put("message", "Bạn đã có certificate rồi");
+                        response.put("certificate", certificateDTO);
+                        response.put("alreadyExists", true);
+
+                        return ResponseEntity.ok(response);
+                    }
+                }
+
+                if (!courseCompletionService.isEligibleForCertificate(userId, courseId)) {
+                    Map<String, Object> response = new HashMap<>();
+                    response.put("success", false);
+                    response.put("message", "Bạn chưa đủ điều kiện nhận certificate");
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+                }
+
+                // Tạo certificate
+                Certificate certificate =
+                        courseCompletionService.createCertificateIfEligible(userId, courseId);
+                CertificateDTO certificateDTO =
+                        courseCompletionService.convertToDTO(certificate);
+
                 Map<String, Object> response = new HashMap<>();
-                response.put("success", false);
-                response.put("message", "Bạn chưa đủ điều kiện nhận certificate");
-                response.put("isEligible", false);
-                response.put("isCourseCompleted", courseCompletionService.isCourseCompleted(userId, courseId));
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
-            }
+                response.put("success", true);
+                response.put("message", "Certificate đã được tạo thành công");
+                response.put("certificate", certificateDTO);
+                response.put("alreadyExists", false);
 
-            // Kiểm tra đã có certificate chưa
-            if (courseCompletionService.hasCertificate(userId, courseId)) {
-                log.info("Certificate already exists for user {} course {}", userId, courseId);
-                Optional<Certificate> existingCert = courseCompletionService.getUserCertificate(userId, courseId);
+                return ResponseEntity.ok(response);
+
+            } catch (DataIntegrityViolationException e) {
+                // Duplicate key - fetch existing
+                log.warn("⚠️ Duplicate detected, fetching existing certificate");
+                Optional<Certificate> existingCert =
+                        courseCompletionService.getUserCertificate(userId, courseId);
 
                 if (existingCert.isPresent()) {
-                    CertificateDTO certificateDTO = courseCompletionService.convertToDTO(existingCert.get());
+                    CertificateDTO certificateDTO =
+                            courseCompletionService.convertToDTO(existingCert.get());
 
                     Map<String, Object> response = new HashMap<>();
                     response.put("success", true);
-                    response.put("message", "Bạn đã có certificate rồi");
                     response.put("certificate", certificateDTO);
                     response.put("alreadyExists", true);
 
                     return ResponseEntity.ok(response);
                 }
+
+                throw new RuntimeException("Failed to create or fetch certificate");
+
+            } catch (Exception e) {
+                log.error("❌ Error: {}", e.getMessage(), e);
+
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("message", "Không thể tạo certificate: " + e.getMessage());
+
+                return ResponseEntity.badRequest().body(response);
             }
-
-            // Tạo certificate mới
-            Certificate certificate = courseCompletionService.createCertificateIfEligible(userId, courseId);
-            CertificateDTO certificateDTO = courseCompletionService.convertToDTO(certificate);
-
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("message", "Certificate đã được tạo thành công");
-            response.put("certificate", certificateDTO);
-            response.put("alreadyExists", false);
-
-            log.info("✅ Certificate created successfully for user {} course {}", userId, courseId);
-            return ResponseEntity.ok(response);
-
-        } catch (Exception e) {
-            log.error("❌ Error claiming certificate for user {} course {}: {}", userId, courseId, e.getMessage(), e);
-
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", false);
-            response.put("message", "Không thể tạo certificate");
-            response.put("error", e.getMessage());
-            response.put("isEligible", courseCompletionService.isEligibleForCertificate(userId, courseId));
-            response.put("isCourseCompleted", courseCompletionService.isCourseCompleted(userId, courseId));
-
-            return ResponseEntity.badRequest().body(response);
         }
     }
 
