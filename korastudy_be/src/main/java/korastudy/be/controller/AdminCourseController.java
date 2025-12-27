@@ -4,8 +4,7 @@ import jakarta.validation.Valid;
 import korastudy.be.dto.request.course.CourseCreateRequest;
 import korastudy.be.dto.request.course.CourseUpdateRequest;
 import korastudy.be.dto.response.course.CourseDTO;
-import korastudy.be.dto.response.enrollment.EnrollmentDTO;
-import korastudy.be.dto.response.course.ReviewDTO;
+import korastudy.be.dto.response.review.ReviewDTO;
 import korastudy.be.dto.response.enrollment.EnrollmentDetailDTO;
 import korastudy.be.dto.response.enrollment.EnrollmentStatsDTO;
 import korastudy.be.payload.response.ApiSuccess;
@@ -121,22 +120,6 @@ public class AdminCourseController {
                 enrollmentPage.getTotalElements(),
                 enrollmentPage.getTotalPages()
         ));
-    }
-
-    @GetMapping("/{id}/reviews")
-    public ResponseEntity<PagedResponse<ReviewDTO>> getCourseReviews(@PathVariable Long id, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
-        Pageable pageable = PageRequest.of(page, size);
-
-        List<ReviewDTO> reviews = reviewService.getCourseReviewsWithPagination(id, pageable);
-        long totalElements = reviewService.countReviewsByCourseId(id);
-
-        return ResponseEntity.ok(new PagedResponse<>(reviews, page, size, totalElements, (int) Math.ceil((double) totalElements / size)));
-    }
-
-    @DeleteMapping("/{courseId}/reviews/{reviewId}")
-    public ResponseEntity<ApiSuccess> deleteReview(@PathVariable Long courseId, @PathVariable Long reviewId) {
-        reviewService.deleteReview(reviewId);
-        return ResponseEntity.ok(ApiSuccess.of("Xóa đánh giá thành công"));
     }
 
 }

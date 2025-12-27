@@ -14,7 +14,6 @@ import korastudy.be.entity.MockTest.PracticeTestResult;
 import korastudy.be.entity.Notification;
 import korastudy.be.entity.PaymentHistory;
 import korastudy.be.entity.Post.PostComment;
-import korastudy.be.entity.Vocabulary.VocabularyProgress;
 import lombok.*;
 
 import java.time.LocalDate;
@@ -88,9 +87,6 @@ public class User extends BaseTimeEntity {
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<SetCard> setCards;
-
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
-    private List<VocabularyProgress> vocabularyProgresses;
 
     // Thêm getter cho username nếu chưa có
     public String getDisplayName() {

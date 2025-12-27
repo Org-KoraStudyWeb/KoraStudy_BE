@@ -67,7 +67,7 @@ public class CourseCompletionService {
                 userId, courseId, isCompleted, oldStatus);
 
         if (isCompleted && oldStatus != EnrollmentStatus.COMPLETED) {
-            // ⭐ CHỈ tạo certificate khi VỪA MỚI chuyển sang COMPLETED
+            // certificate khi VỪA MỚI chuyển sang COMPLETED
             log.info("🎉 User {} just completed course {}, creating certificate...",
                     userId, courseId);
             completeCourse(enrollment);
@@ -152,19 +152,17 @@ public class CourseCompletionService {
     }
 
     /**
-     * ⭐ FIX: Tạo certificate với protection tốt hơn
+     *  Tạo certificate với protection tốt hơn
      */
     @Transactional
     public Certificate createCertificateIfEligible(Long userId, Long courseId) {
-        log.info("🎓 Checking certificate eligibility for userId: {}, courseId: {}", userId, courseId);
+        log.info("🎓 Creating certificate for userId: {}, courseId: {}", userId, courseId);
 
-        // ⭐ Check exists TRƯỚC để tránh duplicate
-        if (certificateRepository.existsByUserIdAndCourseId(userId, courseId)) {
-            log.info("Certificate already exists, fetching it...");
-            Optional<Certificate> existingCert = getUserCertificateSafe(userId, courseId);
-            if (existingCert.isPresent()) {
-                return updateCertificateScoreIfHigher(existingCert.get(), userId, courseId);
-            }
+        // Double-check trong transaction
+        Optional<Certificate> existing = getUserCertificateSafe(userId, courseId);
+        if (existing.isPresent()) {
+            log.info("✅ Certificate already exists, returning it");
+            return existing.get();
         }
 
         if (!isCourseCompleted(userId, courseId)) {
@@ -174,15 +172,27 @@ public class CourseCompletionService {
         User user = new User();
         user.setId(userId);
 
-        Course course = courseRepository.findById(courseId).orElseThrow(() -> new RuntimeException("Course not found"));
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new RuntimeException("Course not found"));
 
         try {
             Certificate certificate = createNewCertificate(user, course, userId);
-            log.info("✅ Certificate created successfully - userId: {}, courseId: {}, id: {}", userId, courseId, certificate.getId());
+            log.info(" Certificate created - id: {}", certificate.getId());
             return certificate;
+
         } catch (DataIntegrityViolationException e) {
-            log.warn("⚠️ Race condition: Duplicate key when creating certificate, fetching existing", e);
-            return getUserCertificateSafe(userId, courseId).orElseThrow(() -> new RuntimeException("Failed to create or retrieve certificate"));
+            log.warn(" Race condition detected, fetching existing certificate");
+
+            // Sleep ngắn để đợi transaction commit
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+            }
+
+            return getUserCertificateSafe(userId, courseId)
+                    .orElseThrow(() -> new RuntimeException(
+                            "Certificate creation failed and could not retrieve existing"));
         }
     }
 
