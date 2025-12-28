@@ -13,8 +13,15 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Controller xử lý API chatbot AI sử dụng Gemini
+ * Controller xử lý API chatbot AI sử dụng Gemini + RAG
  * Giúp người dùng học tiếng Hàn với AI
+ * 
+ * Flow:
+ * 1. Nhận request từ Frontend
+ * 2. GeminiService kiểm tra RAG enabled hay không
+ * 3. Nếu RAG enabled và available → gọi RAG service
+ * 4. Nếu không → gọi Gemini API trực tiếp
+ * 5. Trả về response với sources (nếu dùng RAG)
  */
 @RestController
 @RequestMapping("/api/v1/ai")
@@ -29,21 +36,24 @@ public class AIController {
      * POST /api/v1/ai/chat
      * 
      * @param request - ChatRequest chứa tin nhắn và lịch sử hội thoại
-     * @return ChatResponse với câu trả lời từ AI
+     * @return ChatResponse với câu trả lời từ AI và sources (nếu có)
      */
     @PostMapping("/chat")
     public ResponseEntity<Map<String, Object>> chat(@RequestBody ChatRequest request) {
         try {
             log.info("Received chat request: {}", request.getMessage());
             
-            String aiResponse = geminiService.generateResponse(
+            // Gọi service để lấy response với sources
+            GeminiService.AIResponse aiResponse = geminiService.generateResponseWithSources(
                 request.getMessage(), 
                 request.getConversationHistory()
             );
             
+            // Build response với sources
             ChatResponse response = ChatResponse.builder()
-                    .message(aiResponse)
+                    .message(aiResponse.getMessage())
                     .timestamp(System.currentTimeMillis())
+                    .sources(aiResponse.getSources())
                     .build();
             
             Map<String, Object> result = new HashMap<>();

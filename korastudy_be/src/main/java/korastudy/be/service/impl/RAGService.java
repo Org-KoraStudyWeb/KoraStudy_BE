@@ -49,13 +49,29 @@ public class RAGService {
     }
     
     /**
+     * Response từ RAG bao gồm câu trả lời và sources
+     */
+    public static class RAGResponse {
+        private String answer;
+        private List<Map<String, Object>> sources;
+        
+        public RAGResponse(String answer, List<Map<String, Object>> sources) {
+            this.answer = answer;
+            this.sources = sources != null ? sources : new ArrayList<>();
+        }
+        
+        public String getAnswer() { return answer; }
+        public List<Map<String, Object>> getSources() { return sources; }
+    }
+    
+    /**
      * Gọi Python RAG service để truy vấn
      * 
      * @param message - Câu hỏi của user
      * @param conversationHistory - Lịch sử hội thoại
-     * @return Câu trả lời từ RAG
+     * @return RAGResponse chứa câu trả lời và sources
      */
-    public String queryRAG(String message, List<Map<String, String>> conversationHistory) {
+    public RAGResponse queryRAGWithSources(String message, List<Map<String, String>> conversationHistory) {
         try {
             String url = ragServiceUrl + "/query";
             
@@ -85,13 +101,19 @@ public class RAGService {
                     if (data != null && data.get("message") != null) {
                         String answer = (String) data.get("message");
                         
-                        // Log sources (optional)
-                        List<?> sources = (List<?>) data.get("sources");
-                        if (sources != null && !sources.isEmpty()) {
+                        // Lấy sources từ response
+                        List<Map<String, Object>> sources = new ArrayList<>();
+                        List<?> rawSources = (List<?>) data.get("sources");
+                        if (rawSources != null) {
+                            for (Object src : rawSources) {
+                                if (src instanceof Map) {
+                                    sources.add((Map<String, Object>) src);
+                                }
+                            }
                             log.info("RAG used {} source documents", sources.size());
                         }
                         
-                        return answer;
+                        return new RAGResponse(answer, sources);
                     }
                 }
             }
@@ -105,6 +127,17 @@ public class RAGService {
             log.error("Unexpected error calling RAG service", e);
             throw new RuntimeException("Lỗi khi gọi RAG service: " + e.getMessage());
         }
+    }
+    
+    /**
+     * Gọi Python RAG service để truy vấn (backward compatible)
+     * 
+     * @param message - Câu hỏi của user
+     * @param conversationHistory - Lịch sử hội thoại
+     * @return Câu trả lời từ RAG
+     */
+    public String queryRAG(String message, List<Map<String, String>> conversationHistory) {
+        return queryRAGWithSources(message, conversationHistory).getAnswer();
     }
     
     /**
