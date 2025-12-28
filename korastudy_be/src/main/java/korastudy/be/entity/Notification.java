@@ -18,7 +18,7 @@ public class Notification {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(columnDefinition = "NVARCHAR(MAX)")
+    @Column(columnDefinition = "NVARCHAR(100)")
     private String title;
 
     @Column(columnDefinition = "NVARCHAR(MAX)")
@@ -38,16 +38,24 @@ public class Notification {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "notification_type")
-    private NotificationType type = NotificationType.SYSTEM; // Mặc định là thông báo hệ thống
+    private NotificationType type = NotificationType.SYSTEM;
 
-    // Optional: ID liên quan (post_id, comment_id, etc.)
     @Column(name = "reference_id")
     private Long referenceId;
+
+    // THÊM FIELD NÀY - QUAN TRỌNG!
+    @Column(name = "is_published", nullable = false)
+    @Builder.Default  // Nếu dùng @Builder
+    private Boolean isPublished = false;  // Giá trị mặc định
 
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
-        // Mặc định: thông báo tồn tại 1 giờ
         expirationDate = createdAt.plusHours(1);
+
+        // Đảm bảo isPublished có giá trị nếu vẫn null
+        if (isPublished == null) {
+            isPublished = false;
+        }
     }
 }
