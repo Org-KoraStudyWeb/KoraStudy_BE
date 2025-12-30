@@ -5,7 +5,7 @@ import korastudy.be.entity.BaseEntity.BaseTimeEntity;
 import lombok.*;
 
 @Entity
-@Table(name = "option")
+@Table(name = "option_answer")
 @Getter
 @Setter
 @NoArgsConstructor
