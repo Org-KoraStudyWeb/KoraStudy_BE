@@ -3,7 +3,7 @@ package korastudy.be.entity.Course;
 import jakarta.persistence.*;
 import korastudy.be.entity.Certificate;
 import korastudy.be.entity.PaymentHistory;
-import korastudy.be.entity.Review;
+import korastudy.be.entity.Review.Review;
 import lombok.*;
 
 import java.time.LocalDateTime;

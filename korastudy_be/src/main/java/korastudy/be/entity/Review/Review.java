@@ -1,4 +1,4 @@
-package korastudy.be.entity;
+package korastudy.be.entity.Review;
 
 import jakarta.persistence.*;
 import korastudy.be.entity.BaseEntity.BaseTimeEntity;
@@ -9,6 +9,9 @@ import korastudy.be.entity.MockTest.MockTest;
 import lombok.*;
 
 import korastudy.be.entity.User.User;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "review")
@@ -47,4 +50,13 @@ public class Review extends BaseTimeEntity {
     @Column(name = "status")
     @Enumerated(EnumType.STRING)
     private ReviewStatus status = ReviewStatus.ACTIVE;
+
+    @Column(name = "admin_note", columnDefinition = "NVARCHAR(MAX)")
+    private String adminNote;
+
+    @OneToMany(mappedBy = "review", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ReviewLike> likes = new ArrayList<>();
+
+    @OneToMany(mappedBy = "review", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ReviewReport> reports = new ArrayList<>();
 }
