@@ -3,12 +3,15 @@ package korastudy.be.service;
 import korastudy.be.dto.request.review.ReviewRequest;
 import korastudy.be.dto.request.review.UpdateReviewStatusRequest;
 import korastudy.be.dto.response.review.ReviewDTO;
+import korastudy.be.dto.response.review.ReviewStatsDTO;
 import korastudy.be.entity.Enum.ReviewStatus;
-import korastudy.be.entity.Review;
+import korastudy.be.entity.Review.Review;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 
 public interface IReviewService {
 
@@ -21,8 +24,15 @@ public interface IReviewService {
     // 3. Xóa review (chỉ chủ sở hữu)
     void deleteReview(Long userId, Long reviewId);
 
+
+    //Xóa review chỉ dành cho ADMIN
+    void deleteReviewAsAdmin(Long adminId, Long reviewId);
+
+
     // 4. Lấy review theo ID
     ReviewDTO getReviewById(Long reviewId);
+    //  Lấy review theo ID cho admin
+    ReviewDTO getReviewDetailForAdmin(Long reviewId, Long adminId);
 
     // 5. Lấy tất cả review của một khóa học (chỉ Course)
     List<ReviewDTO> getCourseReviews(Long courseId);
@@ -68,4 +78,47 @@ public interface IReviewService {
 
     // 18. Convert Entity to DTO
     ReviewDTO mapToDTO(Review review);
+
+                            //==============================Stats của review==========//
+
+    ReviewStatsDTO getReviewStatsDTO();
+
+    ReviewStatsDTO getCourseReviewStatsDTO(Long courseId);
+
+    ReviewStatsDTO getMockTestReviewStatsDTO(Long mockTestId);
+
+    // Giữ các phương thức cũ (Map) cho backward compatibility
+    Map<String, Object> getReviewStats();
+
+    Map<String, Object> getCourseReviewStats(Long courseId);
+
+    Map<String, Object> getMockTestReviewStats(Long mockTestId);
+
+    // Thêm phương thức cho dashboard charts
+    Map<String, Object> getDashboardStats();
+
+    // Report a review
+    @Transactional
+    ReviewDTO reportReview(Long reviewId, String reason, Long userId);
+
+    // Like a review
+    @Transactional
+    ReviewDTO likeReview(Long reviewId, Long userId);
+
+    // Unlike a review
+    @Transactional
+    ReviewDTO unlikeReview(Long reviewId, Long userId);
+
+    // Check if user has liked a review
+    boolean hasUserLikedReview(Long reviewId, Long userId);
+
+    // Get like count for a review
+    Long getLikesCount(Long reviewId);
+
+    // Get reported reviews for admin
+    Page<ReviewDTO> getReportedReviews(Pageable pageable);
+
+    // Resolve a reported review (admin action)
+    @Transactional
+    ReviewDTO resolveReport(Long reviewId, boolean takeAction, String adminNote);
 }
