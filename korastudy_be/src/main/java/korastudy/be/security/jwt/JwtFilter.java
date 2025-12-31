@@ -63,37 +63,33 @@ public class JwtFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        String path = request.getServletPath();
-        String method = request.getMethod();
+        // ✅ Bypass preflight
+        if (HttpMethod.OPTIONS.matches(request.getMethod())) {
+            return true;
+        }
 
-        // Các endpoint KHÔNG cần JWT filter
-        List<String> publicPaths = Arrays.asList(
+        String path = request.getServletPath();
+
+        List<String> publicPaths = List.of(
                 "/api/v1/auth/",
                 "/swagger-ui",
                 "/v3/api-docs",
                 "/error",
                 "/ws",
-                "/api/v1/payments/vnpay-return",
-                "/api/v1/payments/callback",
-                "/api/v1/payments/notify",
-                "/api/v1/certificates/public/verify",
+                "/api/v1/payments/",
+                "/api/v1/certificates/public/",
                 "/api/flashcards/system"
         );
 
-        // Kiểm tra public paths
         for (String publicPath : publicPaths) {
             if (path.startsWith(publicPath)) {
                 return true;
             }
         }
 
-        // PUBLIC GET endpoints cho review
-        if (HttpMethod.GET.matches(method)) {
-            if (path.startsWith("/api/v1/reviews/courses/") ||
-                    path.startsWith("/api/v1/reviews/mock-tests/") ||
-                    path.startsWith("/api/v1/courses/")) {
-                return true;
-            }
+        if (HttpMethod.GET.matches(request.getMethod())) {
+            return path.startsWith("/api/v1/courses/")
+                    || path.startsWith("/api/v1/reviews/");
         }
 
         return false;
