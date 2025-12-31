@@ -38,10 +38,21 @@ public class WebSecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(request -> {
                     CorsConfiguration config = new CorsConfiguration();
-                    config.addAllowedOriginPattern("*");
-                    config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+
+                    config.setAllowedOrigins(List.of(
+                            "https://witty-water-06494e100.6.azurestaticapps.net", // user
+                            "https://witty-mud-0560bb800.2.azurestaticapps.net",   // admin
+                            "http://localhost:3000",
+                            "http://localhost:3030",
+                            "http://localhost:8080"
+                    ));
+
+                    config.setAllowedMethods(List.of(
+                            "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
+                    ));
                     config.setAllowedHeaders(List.of("*"));
                     config.setAllowCredentials(true);
+
                     return config;
                 }))
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
