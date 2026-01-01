@@ -60,6 +60,7 @@ public class WebSecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // ========== PUBLIC ENDPOINTS (Không cần auth) ==========
                         .requestMatchers(
+                                "/",
                                 "/api/v1/auth/**",  // Tất cả auth endpoints
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
