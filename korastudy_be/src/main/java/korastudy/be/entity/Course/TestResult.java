@@ -40,4 +40,9 @@ public class TestResult {
     // THÊM: Quan hệ với QuizAnswer
     @OneToMany(mappedBy = "testResult", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<QuizAnswer> quizAnswers;
+
+
+    public Double getScore() {
+        return score != null ? score : 0.0;  // Sửa getter để không bao giờ trả về null
+    }
 }

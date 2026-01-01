@@ -11,7 +11,7 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
 @Service
-@Profile("prod")
+//@Profile("prod")
 @RequiredArgsConstructor
 public class EmailService implements IEmailService {
 
