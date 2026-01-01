@@ -88,12 +88,12 @@ public class PaymentController {
             }
 
             // Redirect về frontend với kết quả
-            String redirectUrl = String.format("http://localhost:3000/payment/result?paymentId=%d&status=%s", payment.getId(), status);
+            String redirectUrl = String.format("https://witty-water-06494e100.6.azurestaticapps.net/result?paymentId=%d&status=%s", payment.getId(), status);
             response.sendRedirect(redirectUrl);
 
         } catch (Exception e) {
             // Xử lý lỗi và redirect về frontend với thông báo lỗi
-            String errorUrl = "http://localhost:3000/payment/result?status=error&message=" + URLEncoder.encode(e.getMessage(), StandardCharsets.UTF_8);
+            String errorUrl = "https://witty-water-06494e100.6.azurestaticapps.net/payment/result?status=error&message=" + URLEncoder.encode(e.getMessage(), StandardCharsets.UTF_8);
             response.sendRedirect(errorUrl);
         }
     }

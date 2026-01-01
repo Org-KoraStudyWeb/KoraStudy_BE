@@ -63,17 +63,28 @@ public class JwtFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        // Bypass preflight
         if (HttpMethod.OPTIONS.matches(request.getMethod())) {
             return true;
         }
 
         String path = request.getServletPath();
 
-        // Chỉ bypass auth endpoints
-        return path.startsWith("/api/v1/auth/")
-                || path.startsWith("/swagger-ui")
-                || path.startsWith("/v3/api-docs")
-                || path.startsWith("/error");
+        return
+                // PUBLIC ROOT
+                path.equals("/") ||
+
+                        // AUTH & DOCS
+                        path.startsWith("/api/v1/auth/") ||
+                        path.startsWith("/swagger-ui") ||
+                        path.startsWith("/v3/api-docs") ||
+                        path.startsWith("/error") ||
+
+                        // PAYMENT CALLBACK / RETURN
+                        path.startsWith("/api/v1/payments/vnpay-return") ||
+                        path.startsWith("/api/v1/payments/callback") ||
+                        path.startsWith("/api/v1/payments/notify") ||
+
+                        // WS
+                        path.startsWith("/ws");
     }
 }
