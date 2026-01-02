@@ -1,9 +1,10 @@
-package korastudy.be.dto.request.course;
+package korastudy.be.dto.request.review;
 
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import korastudy.be.entity.Enum.ReviewType;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -12,13 +13,16 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class ReviewRequest {
-    @NotNull(message = "ID khóa học không được để trống")
-    private Long courseId;
-    
+    @NotNull(message = "Loại đánh giá không được để trống")
+    private ReviewType reviewType; // COURSE hoặc MOCK_TEST
+
+    @NotNull(message = "ID không được để trống")
+    private Long targetId; // courseId hoặc mockTestId tùy theo reviewType
+
     @Min(value = 1, message = "Đánh giá phải từ 1 đến 5 sao")
     @Max(value = 5, message = "Đánh giá phải từ 1 đến 5 sao")
     private Integer rating;
-    
+
     @NotBlank(message = "Nội dung đánh giá không được để trống")
     private String comment;
 }
