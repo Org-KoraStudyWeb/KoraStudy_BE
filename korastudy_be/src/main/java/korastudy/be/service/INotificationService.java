@@ -40,4 +40,7 @@ public interface INotificationService {
     
     // Gửi thông báo kết quả bài thi
     void sendExamResultNotification(User recipient, String title, String content, Long examId);
+    
+    // Gửi thông báo report bài viết cho admin
+    void sendBlogReportNotificationToAdmins(String reporterName, String postTitle, Long postId, Long reportId, String reason);
 }

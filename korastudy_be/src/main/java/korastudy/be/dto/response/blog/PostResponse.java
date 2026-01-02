@@ -1,6 +1,7 @@
 package korastudy.be.dto.response.blog;
 
 import korastudy.be.dto.response.account.AccountResponse;
+import korastudy.be.entity.Enum.PostStatus;
 import korastudy.be.entity.Post.Post;
 import lombok.Data;
 
@@ -14,6 +15,8 @@ public class PostResponse {
     private String postSummary;
     private String postContent;
     private Boolean postPublished;
+    private String featuredImage;
+    private PostStatus postStatus;
 
     // ✅ Dành cho FE: tên gộp sẵn
     private String authorName;
@@ -30,6 +33,8 @@ public class PostResponse {
         response.setPostSummary(post.getPostSummary());
         response.setPostContent(post.getPostContent());
         response.setPostPublished(post.getPublished());
+        response.setFeaturedImage(post.getFeaturedImage());
+        response.setPostStatus(post.getPostStatus());
 
         // ✅ Lấy tác giả
         if (post.getCreatedBy() != null) {

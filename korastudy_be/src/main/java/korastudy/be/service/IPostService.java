@@ -22,6 +22,9 @@ public interface IPostService {
     PostMetaResponse addPostMeta(Long id, PostMetaRequest request, AccountDetailsImpl currentUser);
     PostMetaResponse updatePostMeta(Long postId, Long metaId, PostMetaRequest request, AccountDetailsImpl currentUser);
     void deletePostMeta(Long postId, Long metaId, AccountDetailsImpl currentUser);
+    
+    // Report post
+    void reportPost(Long postId, Long userId, String reason, String description);
 
     // Admin only endpoints
     void deletePost(Long id);

@@ -5,14 +5,20 @@ import korastudy.be.dto.request.blog.PostMetaRequest;
 import korastudy.be.dto.request.blog.UpdatePostRequest;
 import korastudy.be.dto.response.blog.PostMetaResponse;
 import korastudy.be.dto.response.blog.PostResponse;
+import korastudy.be.entity.Enum.PostStatus;
+import korastudy.be.entity.Enum.ReportStatus;
 import korastudy.be.entity.Post.Category;
 import korastudy.be.entity.Post.Post;
 import korastudy.be.entity.Post.PostMeta;
+import korastudy.be.entity.Post.PostReport;
 import korastudy.be.entity.User.Account;
+import korastudy.be.entity.User.User;
 import korastudy.be.exception.ResourceNotFoundException;
 import korastudy.be.repository.AccountRepository;
+import korastudy.be.repository.UserRepository;
 import korastudy.be.repository.blog.CategoryRepository;
 import korastudy.be.repository.blog.PostMetaRepository;
+import korastudy.be.repository.blog.PostReportRepository;
 import korastudy.be.repository.blog.PostRepository;
 import korastudy.be.security.userprinciple.AccountDetailsImpl;
 import korastudy.be.service.IPostService;
@@ -23,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -33,11 +40,16 @@ public class PostService implements IPostService {
     private final PostMetaRepository postMetaRepository;
     private final CategoryRepository categoryRepository;
     private final AccountRepository accountRepository;
+    private final PostReportRepository postReportRepository;
+    private final UserRepository userRepository;
+    private final korastudy.be.service.INotificationService notificationService;
 
     @Override
     @Transactional(readOnly = true)
     public List<PostResponse> getAllPosts() {
     return postRepository.findAllByDeletedAtIsNull().stream()
+                .filter(post -> post.getPostStatus() == null || post.getPostStatus() == PostStatus.APPROVED)
+                .filter(post -> Boolean.TRUE.equals(post.getPublished()))
                 .map(PostResponse::fromEntity)
                 .toList();
     }
@@ -67,6 +79,8 @@ public class PostService implements IPostService {
                 .postSummary(request.getPostSummary())
                 .postContent(request.getPostContent())
                 .published(request.getPostPublished())
+                .featuredImage(request.getFeaturedImage())
+                .postStatus(PostStatus.PENDING)
                 .createdBy(author)
                 .build();
 
@@ -104,6 +118,7 @@ public class PostService implements IPostService {
         post.setPostSummary(request.getPostSummary());
         post.setPostContent(request.getPostContent());
         post.setPublished(request.getPostPublished());
+        post.setFeaturedImage(request.getFeaturedImage());
         // Bỏ post.setLastModified(LocalDateTime.now())
         // BaseTimeEntity sẽ tự động update thông qua JPA auditing
 
@@ -212,5 +227,42 @@ public class PostService implements IPostService {
         if (!isAdmin && !isOwner) {
             throw new AccessDeniedException("You do not have permission to modify this post");
         }
+    }
+
+    @Override
+    public void reportPost(Long postId, Long userId, String reason, String description) {
+        Post post = getPostEntityById(postId);
+        
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
+        
+        // Check if user already reported this post
+        Optional<PostReport> existing = postReportRepository
+            .findByPostIdAndReporterId(postId, userId);
+        
+        if (existing.isPresent()) {
+            throw new IllegalStateException("Bạn đã báo cáo bài viết này rồi");
+        }
+        
+        PostReport report = PostReport.builder()
+            .post(post)
+            .reporter(user)
+            .reason(reason)
+            .description(description)
+            .status(ReportStatus.PENDING)
+            .build();
+        
+        PostReport savedReport = postReportRepository.save(report);
+        
+        // Gửi thông báo cho admin
+        String reporterName = user.getFirstName() + " " + user.getLastName();
+        String postTitle = post.getPostTitle();
+        notificationService.sendBlogReportNotificationToAdmins(
+            reporterName, 
+            postTitle, 
+            post.getId(), 
+            savedReport.getId(), 
+            reason
+        );
     }
 }

@@ -4,15 +4,19 @@ import korastudy.be.dto.request.blog.CategoryRequest;
 import korastudy.be.dto.request.blog.CreatePostRequest;
 import korastudy.be.dto.request.blog.UpdatePostRequest;
 import korastudy.be.dto.response.blog.*;
+import korastudy.be.entity.Enum.PostStatus;
+import korastudy.be.entity.Enum.ReportStatus;
 import korastudy.be.entity.Post.Category;
 import korastudy.be.entity.Post.Post;
 import korastudy.be.entity.Post.PostComment;
 import korastudy.be.entity.Post.PostMeta;
+import korastudy.be.entity.Post.PostReport;
 import korastudy.be.entity.User.Account;
 import korastudy.be.exception.ResourceNotFoundException;
 import korastudy.be.repository.AccountRepository;
 import korastudy.be.repository.blog.CategoryRepository;
 import korastudy.be.repository.blog.PostCommentRepository;
+import korastudy.be.repository.blog.PostReportRepository;
 import korastudy.be.repository.blog.PostRepository;
 import korastudy.be.security.userprinciple.AccountDetailsImpl;
 import korastudy.be.service.IAdminBlogService;
@@ -40,6 +44,7 @@ public class AdminBlogService implements IAdminBlogService {
     private final CategoryRepository categoryRepository;
     private final PostCommentRepository commentRepository;
     private final AccountRepository accountRepository;
+    private final PostReportRepository postReportRepository;
 
     @Override
     public Page<AdminPostResponse> getAllPosts(String keyword, List<Long> categoryIds, Boolean published, Pageable pageable) {
@@ -97,6 +102,8 @@ public class AdminBlogService implements IAdminBlogService {
                 .postSummary(request.getPostSummary())
                 .postContent(request.getPostContent())
                 .published(request.getPostPublished())
+                .featuredImage(request.getFeaturedImage())
+                .postStatus(PostStatus.APPROVED)  // Admin posts auto-approved
                 .createdBy(author)
                 .viewCount(0)
                 .build();
@@ -139,6 +146,7 @@ public class AdminBlogService implements IAdminBlogService {
         post.setPostTitle(request.getPostTitle());
         post.setPostSummary(request.getPostSummary());
         post.setPostContent(request.getPostContent());
+        post.setFeaturedImage(request.getFeaturedImage());
 
         // Xử lý thay đổi trạng thái published
         if (Boolean.TRUE.equals(request.getPostPublished()) && !Boolean.TRUE.equals(post.getPublished())) {
@@ -341,5 +349,100 @@ public class AdminBlogService implements IAdminBlogService {
     private Category getCategoryEntityById(Long id) {
         return categoryRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Category not found with id: " + id));
+    }
+
+    // ===== POST APPROVAL METHODS =====
+
+    @Override
+    public AdminPostResponse approvePost(Long id) {
+        Post post = getPostEntityById(id);
+        
+        post.setPostStatus(PostStatus.APPROVED);
+        post.setPublished(true);
+        post.setPublishedAt(LocalDateTime.now());
+        
+        Post saved = postRepository.save(post);
+        
+        // TODO: Send notification to post author
+        // notificationService.sendPostApprovedNotification(saved.getCreatedBy().getId(), saved.getId());
+        
+        return AdminPostResponse.fromEntity(saved);
+    }
+
+    @Override
+    public AdminPostResponse rejectPost(Long id, String reason) {
+        Post post = getPostEntityById(id);
+        
+        post.setPostStatus(PostStatus.REJECTED);
+        post.setPublished(false);
+        
+        Post saved = postRepository.save(post);
+        
+        // TODO: Send notification to post author with reason
+        // notificationService.sendPostRejectedNotification(saved.getCreatedBy().getId(), saved.getId(), reason);
+        
+        return AdminPostResponse.fromEntity(saved);
+    }
+
+    @Override
+    public AdminPostResponse hidePost(Long id) {
+        Post post = getPostEntityById(id);
+        
+        // Chỉ ẩn ở phía user (published = false)
+        // KHÔNG set deletedAt để admin vẫn thấy được
+        post.setPublished(false);
+        
+        return AdminPostResponse.fromEntity(postRepository.save(post));
+    }
+
+    @Override
+    public String updateFeaturedImage(Long id, String imageUrl) {
+        Post post = getPostEntityById(id);
+        
+        post.setFeaturedImage(imageUrl);
+        postRepository.save(post);
+        
+        return imageUrl;
+    }
+
+    // ===== REPORT MANAGEMENT METHODS =====
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PostReportResponse> getAllReports(String status) {
+        List<PostReport> reports;
+        
+        if (status != null && !status.isEmpty()) {
+            ReportStatus reportStatus = ReportStatus.valueOf(status.toUpperCase());
+            reports = postReportRepository.findByStatus(reportStatus);
+        } else {
+            reports = postReportRepository.findAll();
+        }
+        
+        return reports.stream()
+            .map(PostReportResponse::fromEntity)
+            .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PostReportResponse getReportById(Long id) {
+        PostReport report = postReportRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Report not found with id: " + id));
+        
+        return PostReportResponse.fromEntity(report);
+    }
+
+    @Override
+    public PostReportResponse reviewReport(Long id, String statusStr, String adminNote) {
+        PostReport report = postReportRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Report not found with id: " + id));
+        
+        ReportStatus status = ReportStatus.valueOf(statusStr.toUpperCase());
+        report.setStatus(status);
+        report.setAdminNote(adminNote);
+        
+        PostReport saved = postReportRepository.save(report);
+        return PostReportResponse.fromEntity(saved);
     }
 }
