@@ -46,8 +46,11 @@ public class JwtFilter extends OncePerRequestFilter {
                                 userDetails.getAuthorities()
                         );
                 SecurityContextHolder.getContext().setAuthentication(auth);
-                log.debug("✅ JWT valid for user: {}", username);
             }
+
+            log.debug("✅ JWT valid for user: {}", username);
+        } else {
+            log.debug("No valid JWT for request {}", request.getRequestURI());
         }
 
         filterChain.doFilter(request, response);
