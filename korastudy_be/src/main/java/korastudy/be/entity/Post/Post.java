@@ -2,6 +2,7 @@ package korastudy.be.entity.Post;
 
 import jakarta.persistence.*;
 import korastudy.be.entity.BaseEntity.BaseTimeEntity;
+import korastudy.be.entity.Enum.PostStatus;
 import korastudy.be.entity.User.Account;
 import lombok.*;
 
@@ -37,6 +38,13 @@ public class Post extends BaseTimeEntity {
 
     @Column(name = "post_published_at")
     private LocalDateTime publishedAt;
+
+    @Column(name = "featured_image", columnDefinition = "NVARCHAR(500)")
+    private String featuredImage;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "post_status", length = 20)
+    private PostStatus postStatus = PostStatus.PENDING;
 
     @ManyToMany
     @JoinTable(name = "post_category", joinColumns = @JoinColumn(name = "post_id"), inverseJoinColumns = @JoinColumn(name = "category_id", referencedColumnName = "categoryId"))

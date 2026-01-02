@@ -160,4 +160,78 @@ public class AdminBlogController {
         PostStatisticsResponse statistics = adminBlogService.getBlogStatistics();
         return ResponseEntity.ok(statistics);
     }
+
+    // ==================== POST STATUS MANAGEMENT ====================
+    
+    /**
+     * Duyệt bài viết
+     */
+    @PutMapping("/posts/{id}/approve")
+    public ResponseEntity<AdminPostResponse> approvePost(@PathVariable Long id) {
+        AdminPostResponse post = adminBlogService.approvePost(id);
+        return ResponseEntity.ok(post);
+    }
+
+    /**
+     * Từ chối bài viết
+     */
+    @PutMapping("/posts/{id}/reject")
+    public ResponseEntity<AdminPostResponse> rejectPost(@PathVariable Long id, @RequestBody(required = false) String reason) {
+        AdminPostResponse post = adminBlogService.rejectPost(id, reason);
+        return ResponseEntity.ok(post);
+    }
+
+    /**
+     * Upload featured image cho bài viết
+     */
+    @PostMapping("/posts/{id}/featured-image")
+    public ResponseEntity<Map<String, String>> uploadFeaturedImage(
+            @PathVariable Long id,
+            @RequestParam String imageUrl) {
+        String updatedUrl = adminBlogService.updateFeaturedImage(id, imageUrl);
+        return ResponseEntity.ok(Map.of("featuredImage", updatedUrl));
+    }
+
+    // ==================== REPORT MANAGEMENT ====================
+    
+    /**
+     * Lấy danh sách báo cáo
+     */
+    @GetMapping("/reports")
+    public ResponseEntity<List<PostReportResponse>> getAllReports(
+            @RequestParam(required = false) String status) {
+        List<PostReportResponse> reports = adminBlogService.getAllReports(status);
+        return ResponseEntity.ok(reports);
+    }
+
+    /**
+     * Lấy chi tiết báo cáo
+     */
+    @GetMapping("/reports/{id}")
+    public ResponseEntity<PostReportResponse> getReportById(@PathVariable Long id) {
+        PostReportResponse report = adminBlogService.getReportById(id);
+        return ResponseEntity.ok(report);
+    }
+
+    /**
+     * Xử lý báo cáo (duyệt/bỏ qua)
+     */
+    @PutMapping("/reports/{id}/review")
+    public ResponseEntity<PostReportResponse> reviewReport(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> request) {
+        String status = (String) request.get("status");
+        String adminNote = (String) request.get("adminNote");
+        PostReportResponse report = adminBlogService.reviewReport(id, status, adminNote);
+        return ResponseEntity.ok(report);
+    }
+
+    /**
+     * Ẩn bài viết (sau khi xem báo cáo)
+     */
+    @PutMapping("/posts/{id}/hide")
+    public ResponseEntity<AdminPostResponse> hidePost(@PathVariable Long id) {
+        AdminPostResponse post = adminBlogService.hidePost(id);
+        return ResponseEntity.ok(post);
+    }
 }

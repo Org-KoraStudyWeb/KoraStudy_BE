@@ -1,5 +1,6 @@
 package korastudy.be.dto.response.blog;
 
+import korastudy.be.entity.Enum.PostStatus;
 import korastudy.be.entity.Post.Post;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -20,6 +21,8 @@ public class AdminPostResponse {
     private String postSummary;
     private String postContent;
     private Boolean published;
+    private String featuredImage;
+    private PostStatus postStatus;
     private LocalDateTime publishedAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -38,6 +41,8 @@ public class AdminPostResponse {
                 .postSummary(post.getPostSummary())
                 .postContent(post.getPostContent())
                 .published(post.getPublished())
+                .featuredImage(post.getFeaturedImage())
+                .postStatus(post.getPostStatus())
                 .publishedAt(post.getPublishedAt())
                 .createdAt(post.getCreatedAt())
                 .viewCount(post.getViewCount())

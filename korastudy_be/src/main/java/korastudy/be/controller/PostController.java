@@ -17,6 +17,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/posts")
@@ -143,6 +144,25 @@ public class PostController {
         } catch (AccessDeniedException e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiError.of(e.getMessage()));
         } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiError.of(e.getMessage()));
+        }
+    }
+
+    /**
+     * USER: Báo cáo bài viết
+     */
+    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+    @PostMapping("/{id}/report")
+    public ResponseEntity<?> reportPost(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> request,
+            @AuthenticationPrincipal AccountDetailsImpl currentUser) {
+        try {
+            String reason = request.get("reason");
+            String description = request.get("description");
+            postService.reportPost(id, currentUser.getId(), reason, description);
+            return ResponseEntity.status(HttpStatus.CREATED).body(ApiError.of("Báo cáo đã được gửi thành công"));
+        } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiError.of(e.getMessage()));
         }
     }

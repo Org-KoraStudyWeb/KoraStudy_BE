@@ -4,9 +4,12 @@ import korastudy.be.dto.request.notification.SystemNotificationRequest;
 import korastudy.be.dto.response.notification.NotificationResponse;
 import korastudy.be.dto.response.notification.RealTimeNotificationResponse;
 import korastudy.be.entity.Enum.NotificationType;
+import korastudy.be.entity.Enum.RoleName;
 import korastudy.be.entity.Notification;
+import korastudy.be.entity.User.Account;
 import korastudy.be.entity.User.User;
 import korastudy.be.exception.ResourceNotFoundException;
+import korastudy.be.repository.AccountRepository;
 import korastudy.be.repository.NotificationRepository;
 import korastudy.be.repository.UserRepository;
 import korastudy.be.service.INotificationService;
@@ -25,6 +28,7 @@ public class NotificationService implements INotificationService {
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final AccountRepository accountRepository;
     private final SimpMessagingTemplate messagingTemplate; // WebSocket messaging template
 
     @Override
@@ -179,5 +183,39 @@ public class NotificationService implements INotificationService {
                 "/queue/notifications", 
                 response
         );
+    }
+    
+    @Override
+    public void sendBlogReportNotificationToAdmins(String reporterName, String postTitle, Long postId, Long reportId, String reason) {
+        // Lấy tất cả admin accounts
+        List<Account> adminAccounts = accountRepository.findAllByRoles_RoleName(RoleName.ADMIN);
+        
+        for (Account adminAccount : adminAccounts) {
+            if (adminAccount.getUser() != null) {
+                User adminUser = adminAccount.getUser();
+                
+                String title = "Báo cáo bài viết mới";
+                String content = String.format(
+                    "%s đã báo cáo bài viết \"%s\". Lý do: %s",
+                    reporterName,
+                    postTitle,
+                    reason
+                );
+                
+                Notification notification = Notification.builder()
+                    .title(title)
+                    .content(content)
+                    .read(false)
+                    .user(adminUser)
+                    .type(NotificationType.BLOG_REPORT)
+                    .referenceId(reportId)
+                    .build();
+                
+                Notification savedNotification = notificationRepository.save(notification);
+                
+                // Gửi real-time notification
+                sendRealTimeNotification(adminUser, savedNotification);
+            }
+        }
     }
 }

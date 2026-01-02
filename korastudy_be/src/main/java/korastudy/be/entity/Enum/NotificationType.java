@@ -5,7 +5,8 @@ public enum NotificationType {
     EXAM_RESULT("Kết quả bài thi"),
     FORUM_INTERACTION("Tương tác cộng đồng"),
     PROFILE("Hồ sơ"),
-    COURSE("Khóa học");
+    COURSE("Khóa học"),
+    BLOG_REPORT("Báo cáo bài viết");
     
     private final String displayName;
     
