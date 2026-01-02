@@ -36,8 +36,9 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
             AND (:level IS NULL OR c.courseLevel = :level)
             AND (:minPrice IS NULL OR c.coursePrice >= :minPrice)
             AND (:maxPrice IS NULL OR c.coursePrice <= :maxPrice)
+            AND (:isPublished IS NULL OR c.isPublished = :isPublished)
             AND (:startDate IS NULL OR c.createdAt >= :startDate)
             AND (:endDate IS NULL OR c.createdAt <= :endDate)
             """)
-    Page<Course> searchCoursesAdvanced(@Param("keyword") String keyword, @Param("level") String level, @Param("minPrice") Double minPrice, @Param("maxPrice") Double maxPrice, @Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate, Pageable pageable);
+    Page<Course> searchCoursesAdvanced(@Param("keyword") String keyword, @Param("level") String level, @Param("minPrice") Double minPrice, @Param("maxPrice") Double maxPrice, @Param("isPublished") Boolean isPublished, @Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate, Pageable pageable);
 }

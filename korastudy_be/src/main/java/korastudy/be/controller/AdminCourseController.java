@@ -9,6 +9,7 @@ import korastudy.be.dto.response.enrollment.EnrollmentDetailDTO;
 import korastudy.be.dto.response.enrollment.EnrollmentStatsDTO;
 import korastudy.be.payload.response.ApiSuccess;
 import korastudy.be.payload.response.PagedResponse;
+import korastudy.be.repository.CourseRepository;
 import korastudy.be.service.ICourseService;
 import korastudy.be.service.IEnrollmentService;
 import korastudy.be.service.IReviewService;
@@ -35,21 +36,65 @@ public class AdminCourseController {
     private final ICourseService courseService;
     private final IEnrollmentService enrollmentService;
     private final IReviewService reviewService;
+    private final CourseRepository courseRepository;
 
     @GetMapping
-    public ResponseEntity<PagedResponse<CourseDTO>> getAllCourses(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size, @RequestParam(defaultValue = "id") String sortBy, @RequestParam(defaultValue = "desc") String sortDir, @RequestParam(required = false) String keyword // <— thêm dòng này
+    public ResponseEntity<PagedResponse<CourseDTO>> getAllCourses(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String level,
+            @RequestParam(required = false) Double minPrice,
+            @RequestParam(required = false) Double maxPrice,
+            @RequestParam(required = false) Boolean isPublished
     ) {
+        // Validate sortBy to prevent SQL injection
+        List<String> allowedSortFields = List.of("id", "courseName", "courseLevel", "coursePrice", "isPublished", "createdAt", "lastModified", "viewCount");
+        if (!allowedSortFields.contains(sortBy)) {
+            sortBy = "id"; // Default to id if invalid
+        }
+
         Sort sort = sortDir.equalsIgnoreCase("asc") ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
         Pageable pageable = PageRequest.of(page, size, sort);
 
         List<CourseDTO> courses;
         long totalElements;
 
-        if (keyword != null && !keyword.trim().isEmpty()) {
-            String kw = keyword.trim();
-            courses = courseService.searchCoursesWithPagination(kw, pageable);
-            totalElements = courseService.countSearchResults(kw);
+        // Check if any filter is applied (keyword, level, price, or published status)
+        boolean hasFilters = (keyword != null && !keyword.trim().isEmpty()) ||
+                level != null ||
+                minPrice != null ||
+                maxPrice != null ||
+                isPublished != null;
+
+        if (hasFilters) {
+            // Use advanced search when filters are present
+            courses = courseService.searchCoursesAdvanced(
+                    keyword != null && !keyword.trim().isEmpty() ? keyword.trim() : null,
+                    level,
+                    minPrice,
+                    maxPrice,
+                    isPublished,
+                    null, // startDate
+                    null, // endDate
+                    pageable
+            );
+
+            // Count total results with same filters
+            totalElements = courseRepository.searchCoursesAdvanced(
+                    keyword != null && !keyword.trim().isEmpty() ? keyword.trim() : null,
+                    level,
+                    minPrice,
+                    maxPrice,
+                    isPublished,
+                    null,
+                    null,
+                    Pageable.unpaged()
+            ).getTotalElements();
         } else {
+            // No filters - return all courses with pagination
             courses = courseService.getAllCoursesWithPagination(pageable);
             totalElements = courseService.countCourses();
         }

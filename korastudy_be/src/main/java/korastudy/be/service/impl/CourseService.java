@@ -106,9 +106,9 @@ public class CourseService implements ICourseService {
     }
 
     @Override
-    public List<CourseDTO> searchCoursesAdvanced(String keyword, String level, Double minPrice, Double maxPrice, LocalDateTime startDate, LocalDateTime endDate, Pageable pageable) {
+    public List<CourseDTO> searchCoursesAdvanced(String keyword, String level, Double minPrice, Double maxPrice, Boolean isPublished, LocalDateTime startDate, LocalDateTime endDate, Pageable pageable) {
 
-        Page<Course> coursePage = courseRepository.searchCoursesAdvanced(keyword, level, minPrice, maxPrice, startDate, endDate, pageable);
+        Page<Course> coursePage = courseRepository.searchCoursesAdvanced(keyword, level, minPrice, maxPrice, isPublished, startDate, endDate, pageable);
 
         return coursePage.getContent().stream().map(this::mapToDTO).collect(Collectors.toList());
     }
