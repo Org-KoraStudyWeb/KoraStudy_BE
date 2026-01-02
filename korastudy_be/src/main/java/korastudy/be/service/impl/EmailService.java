@@ -5,11 +5,13 @@ import korastudy.be.entity.Course.Course;
 import korastudy.be.entity.User.Account;
 import korastudy.be.service.IEmailService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Profile;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
 @Service
+//@Profile("prod")
 @RequiredArgsConstructor
 public class EmailService implements IEmailService {
 

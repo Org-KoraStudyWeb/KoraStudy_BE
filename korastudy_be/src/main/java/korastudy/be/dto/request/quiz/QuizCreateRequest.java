@@ -29,7 +29,6 @@ public class QuizCreateRequest {
     private Integer passingScore; // %
 
     @Builder.Default
-    @NotNull(message = "Trạng thái publish không được để trống")
     private Boolean isPublished = false;
 
     @Builder.Default
@@ -38,7 +37,5 @@ public class QuizCreateRequest {
     @NotNull
     private Long sectionId;
 
-    @Valid
-    @NotEmpty(message = "Quiz phải có ít nhất một câu hỏi")
     private List<QuestionCreateRequest> questions;
 }

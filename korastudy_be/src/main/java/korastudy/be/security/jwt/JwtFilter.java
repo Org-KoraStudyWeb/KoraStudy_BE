@@ -46,8 +46,11 @@ public class JwtFilter extends OncePerRequestFilter {
                                 userDetails.getAuthorities()
                         );
                 SecurityContextHolder.getContext().setAuthentication(auth);
-                log.debug("✅ JWT valid for user: {}", username);
             }
+
+            log.debug("✅ JWT valid for user: {}", username);
+        } else {
+            log.debug("No valid JWT for request {}", request.getRequestURI());
         }
 
         filterChain.doFilter(request, response);
@@ -63,39 +66,29 @@ public class JwtFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
+        if (HttpMethod.OPTIONS.matches(request.getMethod())) {
+            return true;
+        }
+
         String path = request.getServletPath();
-        String method = request.getMethod();
 
-        // Các endpoint KHÔNG cần JWT filter
-        List<String> publicPaths = Arrays.asList(
-                "/api/v1/auth/",
-                "/swagger-ui",
-                "/v3/api-docs",
-                "/error",
-                "/ws",
-                "/api/v1/payments/vnpay-return",
-                "/api/v1/payments/callback",
-                "/api/v1/payments/notify",
-                "/api/v1/certificates/public/verify",
-                "/api/flashcards/system"
-        );
+        return
+                // PUBLIC ROOT
+                path.equals("/") ||
 
-        // Kiểm tra public paths
-        for (String publicPath : publicPaths) {
-            if (path.startsWith(publicPath)) {
-                return true;
-            }
-        }
+                        // AUTH & DOCS
+                        path.startsWith("/api/v1/auth/") ||
+                        path.startsWith("/swagger-ui") ||
+                        path.startsWith("/v3/api-docs") ||
+                        path.startsWith("/error") ||
+                        path.startsWith("/robots") ||
 
-        // PUBLIC GET endpoints cho review
-        if (HttpMethod.GET.matches(method)) {
-            if (path.startsWith("/api/v1/reviews/courses/") ||
-                    path.startsWith("/api/v1/reviews/mock-tests/") ||
-                    path.startsWith("/api/v1/courses/")) {
-                return true;
-            }
-        }
+                        // PAYMENT CALLBACK / RETURN
+                        path.startsWith("/api/v1/payments/vnpay-return") ||
+                        path.startsWith("/api/v1/payments/callback") ||
+                        path.startsWith("/api/v1/payments/notify") ||
 
-        return false;
+                        // WS
+                        path.startsWith("/ws");
     }
 }

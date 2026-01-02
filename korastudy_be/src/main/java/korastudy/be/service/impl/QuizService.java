@@ -960,40 +960,58 @@ public class QuizService implements IQuizService {
                     .build();
 
             if (!quizResults.isEmpty()) {
-                attemptedQuizzes++;
-
                 // Tính điểm trung bình của tất cả lần thi quiz này
                 double quizTotalScore = 0.0;
                 double bestScore = 0.0;
                 LocalDateTime firstAttempt = null;
                 LocalDateTime lastAttempt = null;
+                int validScoresCount = 0; // Đếm số kết quả có score hợp lệ
 
                 for (TestResult result : quizResults) {
-                    quizTotalScore += result.getScore();
+                    // FIX: Kiểm tra null cho score
+                    Double score = result.getScore();
+                    if (score != null) {
+                        quizTotalScore += score;
+                        validScoresCount++;
 
-                    // Tìm điểm cao nhất
-                    if (result.getScore() > bestScore) {
-                        bestScore = result.getScore();
+                        // Tìm điểm cao nhất
+                        if (score > bestScore) {
+                            bestScore = score;
+                        }
+                    } else {
+                        // Ghi log nếu có score null
+                        log.debug("TestResult ID {} có score = null, bỏ qua trong tính điểm", result.getId());
                     }
 
                     // Tìm lần thi đầu tiên và cuối cùng
-                    if (firstAttempt == null || result.getTakenDate().isBefore(firstAttempt)) {
-                        firstAttempt = result.getTakenDate();
-                    }
-                    if (lastAttempt == null || result.getTakenDate().isAfter(lastAttempt)) {
-                        lastAttempt = result.getTakenDate();
+                    if (result.getTakenDate() != null) {
+                        if (firstAttempt == null || result.getTakenDate().isBefore(firstAttempt)) {
+                            firstAttempt = result.getTakenDate();
+                        }
+                        if (lastAttempt == null || result.getTakenDate().isAfter(lastAttempt)) {
+                            lastAttempt = result.getTakenDate();
+                        }
                     }
                 }
 
-                double quizAverageScore = quizTotalScore / quizResults.size();
+                // Chỉ tính nếu có ít nhất 1 kết quả hợp lệ
+                if (validScoresCount > 0) {
+                    attemptedQuizzes++;
+                    double quizAverageScore = quizTotalScore / validScoresCount;
 
-                quizAverage.setAverageScore(Math.round(quizAverageScore * 100.0) / 100.0);
-                quizAverage.setBestScore(Math.round(bestScore * 100.0) / 100.0);
-                quizAverage.setFirstAttemptDate(firstAttempt);
-                quizAverage.setLastAttemptDate(lastAttempt);
+                    quizAverage.setAverageScore(Math.round(quizAverageScore * 100.0) / 100.0);
+                    quizAverage.setBestScore(Math.round(bestScore * 100.0) / 100.0);
+                    quizAverage.setFirstAttemptDate(firstAttempt);
+                    quizAverage.setLastAttemptDate(lastAttempt);
 
-                // Cộng vào tổng điểm trung bình
-                totalQuizAverageScore += quizAverageScore;
+                    // Cộng vào tổng điểm trung bình
+                    totalQuizAverageScore += quizAverageScore;
+                } else {
+                    // Tất cả score đều null, coi như chưa làm quiz
+                    quizAverage.setAverageScore(0.0);
+                    quizAverage.setBestScore(0.0);
+                    quizAverage.setAttemptCount(0); // Reset về 0 vì không có kết quả hợp lệ
+                }
 
             } else {
                 // Quiz chưa làm - điểm trung bình = 0

@@ -38,10 +38,21 @@ public class WebSecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(request -> {
                     CorsConfiguration config = new CorsConfiguration();
-                    config.addAllowedOriginPattern("*");
-                    config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+
+                    config.setAllowedOrigins(List.of(
+                            "https://witty-water-06494e100.6.azurestaticapps.net", // user
+                            "https://witty-mud-0560bb800.2.azurestaticapps.net",   // admin
+                            "http://localhost:3000",
+                            "http://localhost:3030",
+                            "http://localhost:8080"
+                    ));
+
+                    config.setAllowedMethods(List.of(
+                            "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
+                    ));
                     config.setAllowedHeaders(List.of("*"));
                     config.setAllowCredentials(true);
+
                     return config;
                 }))
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -49,6 +60,7 @@ public class WebSecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // ========== PUBLIC ENDPOINTS (Không cần auth) ==========
                         .requestMatchers(
+                                "/",
                                 "/api/v1/auth/**",  // Tất cả auth endpoints
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
@@ -75,24 +87,54 @@ public class WebSecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/reviews/mock-tests/*/average-rating").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/reviews/mock-tests/*/count").permitAll()
 
+                        // Review stats - public GET
+                        .requestMatchers(HttpMethod.GET, "/api/v1/reviews/courses/*/stats").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/reviews/courses/*/stats/dto").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/reviews/mock-tests/*/stats").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/reviews/mock-tests/*/stats/dto").permitAll()
+
+                        // Single review - public GET
+                        .requestMatchers(HttpMethod.GET, "/api/v1/reviews/{id}").permitAll()
+
                         // ========== PUBLIC COURSES ENDPOINTS ==========
                         .requestMatchers(HttpMethod.GET, "/api/v1/courses/**").permitAll()
 
-                        // ========== PRIVATE REVIEW ENDPOINTS (Cần auth) ==========
+                        // ========== USER REVIEW ENDPOINTS (Cần auth) ==========
                         // Tạo review - cần auth
                         .requestMatchers(HttpMethod.POST, "/api/v1/reviews").authenticated()
                         // Sửa review - cần auth
-                        .requestMatchers(HttpMethod.PUT, "/api/v1/reviews/**").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/reviews/{id}").authenticated()
                         // Xóa review - cần auth
-                        .requestMatchers(HttpMethod.DELETE, "/api/v1/reviews/**").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/reviews/{id}").authenticated()
                         // Lấy review của tôi - cần auth
                         .requestMatchers(HttpMethod.GET, "/api/v1/reviews/my-reviews").authenticated()
                         // Kiểm tra đã review chưa - cần auth
                         .requestMatchers(HttpMethod.GET, "/api/v1/reviews/check").authenticated()
-                        // Lấy chi tiết review (cho owner) - cần auth
-                        .requestMatchers(HttpMethod.GET, "/api/v1/reviews/{id}").authenticated()
 
-                        // ========== ADMIN ENDPOINTS ==========
+                        // Review interactions - cần auth
+                        .requestMatchers(HttpMethod.POST, "/api/v1/reviews/{id}/like").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/reviews/{id}/like").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/reviews/{id}/like/check").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/reviews/{id}/report").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/reviews/{id}/report/check").authenticated()
+
+                        // ========== ADMIN REVIEW ENDPOINTS (Chỉ ADMIN) ==========
+                        // Admin dashboard & stats
+                        .requestMatchers(HttpMethod.GET, "/api/v1/reviews/admin/stats").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/reviews/admin/dashboard").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/reviews/admin/stats/legacy").hasRole("ADMIN")
+
+                        // Admin review management
+                        .requestMatchers(HttpMethod.GET, "/api/v1/reviews/admin/all").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/reviews/admin/reported").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/reviews/admin/{id}").hasRole("ADMIN")
+
+                        // Admin review actions
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/reviews/admin/{id}/status").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/reviews/admin/{id}/resolve-report").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/reviews/admin/{id}").hasRole("ADMIN")
+
+                        // ========== ADMIN GENERAL ENDPOINTS ==========
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
 
                         // ========== PAYMENT ENDPOINTS ==========
