@@ -44,8 +44,12 @@ public class VnPayService {
             vnp_Params.put("vnp_ReturnUrl", vnPayConfig.getReturnUrl());
             vnp_Params.put("vnp_IpAddr", vnp_IpAddr);
 
-            Calendar cld = Calendar.getInstance(TimeZone.getTimeZone("Etc/GMT+7"));
+            // Tạo Calendar và SimpleDateFormat với timezone GMT+7 (Việt Nam)
+            TimeZone vietnamTimeZone = TimeZone.getTimeZone("Asia/Ho_Chi_Minh");
+            Calendar cld = Calendar.getInstance(vietnamTimeZone);
             SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMddHHmmss");
+            formatter.setTimeZone(vietnamTimeZone); // QUAN TRỌNG: Set timezone cho formatter
+            
             vnp_Params.put("vnp_CreateDate", formatter.format(cld.getTime()));
             cld.add(Calendar.MINUTE, 15);
             vnp_Params.put("vnp_ExpireDate", formatter.format(cld.getTime()));
