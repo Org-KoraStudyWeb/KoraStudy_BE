@@ -88,7 +88,7 @@ public class PaymentController {
             }
 
             // Redirect về frontend với kết quả
-            String redirectUrl = String.format("https://witty-water-06494e100.6.azurestaticapps.net/result?paymentId=%d&status=%s", payment.getId(), status);
+            String redirectUrl = String.format("https://witty-water-06494e100.6.azurestaticapps.net/payment/result?paymentId=%d&status=%s", payment.getId(), status);
             response.sendRedirect(redirectUrl);
 
         } catch (Exception e) {
