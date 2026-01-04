@@ -2,6 +2,7 @@ package korastudy.be.controller;
 
 import korastudy.be.service.impl.AzureSpeechService;
 import korastudy.be.service.impl.AzureTranslatorService;
+import korastudy.be.service.impl.KrDictService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -23,6 +24,7 @@ public class AzureController {
 
     private final AzureTranslatorService translatorService;
     private final AzureSpeechService speechService;
+    private final KrDictService krDictService;
 
     /**
      * Dịch văn bản từ Korean sang Vietnamese
@@ -206,9 +208,39 @@ public class AzureController {
         result.put("message", "Azure services are running");
         result.put("services", Map.of(
             "translator", "available",
-            "speech", "available"
+            "speech", "available",
+            "krdict", "available"
         ));
 
         return ResponseEntity.ok(result);
+    }
+
+    /**
+     * Tra từ điển Hàn Quốc (Korean Dictionary - krdict.korean.go.kr)
+     * POST /api/v1/azure/dictionary/lookup
+     */
+    @PostMapping("/dictionary/lookup")
+    public ResponseEntity<Map<String, Object>> lookupDictionary(@RequestBody Map<String, String> request) {
+        try {
+            String word = request.get("word");
+            if (word == null || word.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "Word cannot be empty"
+                ));
+            }
+
+            Map<String, Object> result = krDictService.lookupWord(word.trim());
+            result.put("success", true);
+            
+            return ResponseEntity.ok(result);
+
+        } catch (Exception e) {
+            log.error("Dictionary lookup error: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                "success", false,
+                "message", "Dictionary lookup failed: " + e.getMessage()
+            ));
+        }
     }
 }
