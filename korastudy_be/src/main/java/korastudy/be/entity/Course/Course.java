@@ -5,6 +5,7 @@ import korastudy.be.entity.Certificate;
 import korastudy.be.entity.PaymentHistory;
 import korastudy.be.entity.Review.Review;
 import lombok.*;
+import org.hibernate.annotations.Formula;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -51,6 +52,12 @@ public class Course {
 
     @Column(name = "last_modified")
     private LocalDateTime lastModified;
+
+    @Formula("(SELECT COUNT(*) FROM enrollments e WHERE e.course_id = id)")
+    private Long numberOfEnrollments;
+
+    @Formula("(SELECT COUNT(*) FROM lesson l JOIN section s ON l.section_id = s.id WHERE s.course_id = id)")
+    private Long numberOfLessons;
 
     // Quan hệ: 1 khóa học có nhiều Section
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)

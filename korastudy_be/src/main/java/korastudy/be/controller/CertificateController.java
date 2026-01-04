@@ -83,7 +83,7 @@ public class CertificateController {
     }
 
     /**
-     * ⭐ FIX: Thêm try-catch để handle duplicate error
+     *  FIX: Thêm try-catch để handle duplicate error
      */
     @GetMapping("/courses/{courseId}/has-certificate")
     public ResponseEntity<Map<String, Object>> hasCertificate(@AuthenticationPrincipal UserDetails userDetails, @PathVariable Long courseId) {
@@ -113,7 +113,7 @@ public class CertificateController {
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            log.error("❌ Error checking certificate for user {} course {}: {}", userId, courseId, e.getMessage());
+            log.error(" Error checking certificate for user {} course {}: {}", userId, courseId, e.getMessage());
             response.put("hasCertificate", false);
             response.put("error", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
@@ -228,7 +228,7 @@ public class CertificateController {
 
             } catch (DataIntegrityViolationException e) {
                 // Duplicate key - fetch existing
-                log.warn("⚠️ Duplicate detected, fetching existing certificate");
+                log.warn(" Duplicate detected, fetching existing certificate");
                 Optional<Certificate> existingCert =
                         courseCompletionService.getUserCertificate(userId, courseId);
 
@@ -247,7 +247,7 @@ public class CertificateController {
                 throw new RuntimeException("Failed to create or fetch certificate");
 
             } catch (Exception e) {
-                log.error("❌ Error: {}", e.getMessage(), e);
+                log.error(" Error: {}", e.getMessage(), e);
 
                 Map<String, Object> response = new HashMap<>();
                 response.put("success", false);
@@ -411,7 +411,7 @@ public class CertificateController {
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            log.error("❌ Error getting certificate by code {}: {}", certificateCode, e.getMessage(), e);
+            log.error(" Error getting certificate by code {}: {}", certificateCode, e.getMessage(), e);
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
@@ -468,7 +468,7 @@ public class CertificateController {
             return ResponseEntity.ok(verificationInfo);
 
         } catch (Exception e) {
-            log.error("❌ Error verifying certificate {}: {}", certificateCode, e.getMessage(), e);
+            log.error(" Error verifying certificate {}: {}", certificateCode, e.getMessage(), e);
 
             Map<String, Object> response = new HashMap<>();
             response.put("valid", false);
@@ -508,7 +508,7 @@ public class CertificateController {
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            log.error("❌ Admin error getting certificate for user {} course {}: {}", userId, courseId, e.getMessage(), e);
+            log.error(" Admin error getting certificate for user {} course {}: {}", userId, courseId, e.getMessage(), e);
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
@@ -546,7 +546,7 @@ public class CertificateController {
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            log.error("❌ Admin error deleting certificate {}: {}", certificateId, e.getMessage(), e);
+            log.error(" Admin error deleting certificate {}: {}", certificateId, e.getMessage(), e);
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);

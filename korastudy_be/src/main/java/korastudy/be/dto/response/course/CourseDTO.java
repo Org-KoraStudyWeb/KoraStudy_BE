@@ -27,4 +27,5 @@ public class CourseDTO {
     private List<SectionDTO> sections;
     private double averageRating;
     private int enrollmentCount;
+    private Long numberOfLessons;
 }
