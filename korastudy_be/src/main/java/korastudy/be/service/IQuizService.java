@@ -64,6 +64,11 @@ public interface IQuizService {
     QuestionDTO addQuestionToQuiz(Long quizId, QuestionCreateRequest request);
 
     /**
+     * Thêm nhiều câu hỏi vào quiz (Import Excel)
+     */
+    List<QuestionDTO> addQuestionsToQuiz(Long quizId, List<QuestionCreateRequest> requests);
+
+    /**
      * Cập nhật câu hỏi
      */
     QuestionDTO updateQuestion(Long questionId, QuestionUpdateRequest request);

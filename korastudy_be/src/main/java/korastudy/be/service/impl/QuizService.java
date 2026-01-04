@@ -262,6 +262,54 @@ public class QuizService implements IQuizService {
 
     @Override
     @Transactional
+    public List<QuestionDTO> addQuestionsToQuiz(Long quizId, List<QuestionCreateRequest> requests) {
+        log.info("Thêm {} câu hỏi vào quiz {}", requests.size(), quizId);
+        List<QuestionDTO> results = new ArrayList<>();
+        
+        Quiz quiz = quizRepository.findById(quizId).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy quiz với ID: " + quizId));
+        
+        // Lấy max order hiện tại
+        Integer maxOrder = questionRepository.findMaxOrderIndexByQuizId(quizId);
+        int currentOrder = maxOrder != null ? maxOrder : 0;
+
+        for (QuestionCreateRequest request : requests) {
+            // Tự động gán order nếu không có hoặc bị trùng (đơn giản là +1 liên tục)
+            if (request.getOrderIndex() == null || request.getOrderIndex() <= currentOrder) {
+                currentOrder++;
+                request.setOrderIndex(currentOrder);
+            } else {
+                currentOrder = Math.max(currentOrder, request.getOrderIndex());
+            }
+            
+            // Reuse logic của addQuestionToQuiz nhưng cần refactor một chút để tránh query quiz nhiều lần
+            // Nhưng để an toàn và nhanh, ta gọi hàm xử lý question riêng hoặc copy logic
+            
+            // Logic tạo question
+            Question question = Question.builder()
+                    .questionText(request.getQuestionText())
+                    .questionType(request.getQuestionType())
+                    .score(request.getScore())
+                    .orderIndex(request.getOrderIndex())
+                    .imageUrl(request.getImageUrl())
+                    .explanation(request.getExplanation())
+                    .quiz(quiz)
+                    .build();
+            
+             Question savedQuestion = questionRepository.save(question);
+             
+             if (request.getOptions() != null && !request.getOptions().isEmpty()) {
+                 List<Option> options = createOptionsForQuestion(savedQuestion, request.getOptions());
+                 savedQuestion.setOptions(options);
+             }
+             
+             results.add(QuestionMapper.toDTOForTeacher(savedQuestion));
+        }
+        
+        return results;
+    }
+
+    @Override
+    @Transactional
     public QuestionDTO updateQuestion(Long questionId, QuestionUpdateRequest request) {
         Question question = questionRepository.findById(questionId).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy câu hỏi với ID: " + questionId));
 
@@ -270,14 +318,12 @@ public class QuizService implements IQuizService {
         String newImageUrl = request.getImageUrl();
 
         // Xóa ảnh cũ nếu có thay đổi và ảnh cũ tồn tại
-        // BUG FIX: Chỉ xóa nếu newImageUrl null HOẶC khác oldImageUrl, VÀ oldImageUrl không null
         if (oldImageUrl != null && (newImageUrl == null || !oldImageUrl.equals(newImageUrl))) {
             try {
                 cloudinaryService.deleteFile(oldImageUrl);
                 log.info("Đã xóa ảnh cũ của câu hỏi: {}", oldImageUrl);
             } catch (Exception e) {
                 log.warn("Không thể xóa ảnh cũ: {}", oldImageUrl, e);
-                // Không throw exception để tránh ảnh hưởng đến update
             }
         }
         // ============================================
@@ -296,56 +342,63 @@ public class QuizService implements IQuizService {
         question.setImageUrl(request.getImageUrl()); // URL từ upload service
         question.setExplanation(request.getExplanation());
 
-        // Lưu câu hỏi đã được cập nhật trước
-        Question updatedQuestion = questionRepository.save(question);
-
-        // ============ THÊM XỬ LÝ XÓA ẢNH CỦA OPTIONS CŨ ============
-        // Lấy options cũ trước khi xóa (cần lấy trước khi deleteByQuestionId)
-        List<Option> oldOptions = optionRepository.findByQuestionId(questionId);
-
-        // Xóa ảnh của tất cả options cũ
-        for (Option oldOption : oldOptions) {
-            if (oldOption.getImageUrl() != null && !oldOption.getImageUrl().isEmpty()) {
-                try {
-                    cloudinaryService.deleteFile(oldOption.getImageUrl());
-                    log.info("Đã xóa ảnh cũ của option: {}", oldOption.getImageUrl());
-                } catch (Exception e) {
-                    log.warn("Không thể xóa ảnh option cũ: {}", oldOption.getImageUrl(), e);
+        // XỬ LÝ OPTIONS
+        
+        // 1. Kiểm tra xóa ảnh của options cũ sẽ bị xóa
+        // (Lấy danh sách cũ từ question.getOptions())
+        if (question.getOptions() != null) {
+             for (Option oldOption : question.getOptions()) {
+                if (oldOption.getImageUrl() != null && !oldOption.getImageUrl().isEmpty()) {
+                    try {
+                        cloudinaryService.deleteFile(oldOption.getImageUrl());
+                        log.info("Đã xóa ảnh cũ của option: {}", oldOption.getImageUrl());
+                    } catch (Exception e) {
+                        log.warn("Không thể xóa ảnh option cũ: {}", oldOption.getImageUrl(), e);
+                    }
                 }
             }
         }
-        // =========================================================
 
-        // Xóa options cũ từ database
-        optionRepository.deleteByQuestionId(questionId);
+        // 2. Clear collection hiện tại (Cascade OrphanRemoval sẽ tự xóa DB records)
+        if (question.getOptions() != null) {
+            question.getOptions().clear();
+        } else {
+            question.setOptions(new ArrayList<>());
+        }
 
-        // Tạo options mới nếu có
+        // 3. Tạo options mới và thêm vào collection
         if (request.getOptions() != null && !request.getOptions().isEmpty()) {
-            // Validate options theo loại câu hỏi
+            // Validate options
             validateQuestionOptionsBasedOnType(request.getQuestionType(), request.getOptions().stream().map(opt -> {
                 OptionCreateRequest createRequest = new OptionCreateRequest();
                 createRequest.setOptionText(opt.getOptionText());
                 createRequest.setIsCorrect(opt.getIsCorrect());
                 createRequest.setImageUrl(opt.getImageUrl());
+                createRequest.setOrderIndex(opt.getOrderIndex());
                 return createRequest;
             }).collect(Collectors.toList()));
 
-            // Với FILL_IN_BLANK, tất cả option đều là đáp án đúng
+            // Với FILL_IN_BLANK, tất cả option đều là đúng
             if (request.getQuestionType() == QuestionType.FILL_IN_BLANK) {
                 request.getOptions().forEach(opt -> opt.setIsCorrect(true));
             }
 
-            // ============ THÊM VALIDATION CHO ẢNH OPTIONS MỚI ============
+            // Validate ảnh option mới
             for (OptionUpdateRequest optionRequest : request.getOptions()) {
                 if (optionRequest.getImageUrl() != null && !optionRequest.getImageUrl().isEmpty()) {
                     validateImageUrl(optionRequest.getImageUrl(), "imageUrl của đáp án");
                 }
             }
-            // ============================================================
 
-            List<Option> newOptions = createOptionsForQuestion(updatedQuestion, request.getOptions());
-            updatedQuestion.setOptions(newOptions);
+            // Tạo danh sách Option objects (chưa lưu vào DB)
+            List<Option> newOptions = createOptionObjectsForQuestionInUpdate(question, request.getOptions());
+            
+            // Add vào collection
+            question.getOptions().addAll(newOptions);
         }
+
+        // Lưu câu hỏi (cascade sẽ lưu options)
+        Question updatedQuestion = questionRepository.save(question);
 
         log.info("Cập nhật câu hỏi thành công: {}", questionId);
 
@@ -1183,7 +1236,10 @@ public class QuizService implements IQuizService {
 
                 if (request instanceof OptionCreateRequest) {
                     OptionCreateRequest createRequest = (OptionCreateRequest) request;
-                    builder.optionText(createRequest.getOptionText()).isCorrect(createRequest.getIsCorrect()).imageUrl(createRequest.getImageUrl());
+                    builder.optionText(createRequest.getOptionText())
+                           .isCorrect(createRequest.getIsCorrect())
+                           .imageUrl(createRequest.getImageUrl())
+                           .orderIndex(createRequest.getOrderIndex() != null ? createRequest.getOrderIndex() : options.size() + 1);
                 } else if (request instanceof OptionUpdateRequest) {
                     OptionUpdateRequest updateRequest = (OptionUpdateRequest) request;
                     builder.optionText(updateRequest.getOptionText()).isCorrect(updateRequest.getIsCorrect()).imageUrl(updateRequest.getImageUrl());
@@ -1194,6 +1250,27 @@ public class QuizService implements IQuizService {
             return optionRepository.saveAll(options);
         }
 
+        return options;
+    }
+
+    /**
+     * Helper create options (without saving) for update flow
+     */
+    private List<Option> createOptionObjectsForQuestionInUpdate(Question question, List<OptionUpdateRequest> optionRequests) {
+        List<Option> options = new ArrayList<>();
+        if (optionRequests != null) {
+            int index = 1;
+            for (OptionUpdateRequest request : optionRequests) {
+                Option option = Option.builder()
+                        .question(question)
+                        .optionText(request.getOptionText())
+                        .isCorrect(request.getIsCorrect())
+                        .imageUrl(request.getImageUrl())
+                        .orderIndex(request.getOrderIndex() != null ? request.getOrderIndex() : index++)
+                        .build();
+                options.add(option);
+            }
+        }
         return options;
     }
 
