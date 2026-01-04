@@ -27,7 +27,7 @@ public class VnPayService {
         try {
             String vnp_IpAddr = getIpAddress(request);
 
-            // 💡 FIX 1: KHÔNG nhân 100 - dùng amount trực tiếp
+            //  KHÔNG nhân 100 - dùng amount trực tiếp
             long finalAmount = amount * 100;
 
             // 1. Khởi tạo các tham số
@@ -113,7 +113,7 @@ public class VnPayService {
 
         log.info("All parameters from VNPAY: {}", fields);
 
-        // 💡 FIX 2: CHỈ lấy các field bắt đầu bằng "vnp_"
+        // CHỈ lấy các field bắt đầu bằng "vnp_"
         Map<String, String> vnpFields = new TreeMap<>();
         for (Map.Entry<String, String> entry : fields.entrySet()) {
             if (entry.getKey().startsWith("vnp_")) {
@@ -121,7 +121,7 @@ public class VnPayService {
             }
         }
 
-        // 💡 FIX 3: Tạo query string với URL ENCODING (giống khi tạo URL)
+        //  Tạo query string với URL ENCODING (giống khi tạo URL)
         StringBuilder hashData = new StringBuilder();
         for (Map.Entry<String, String> entry : vnpFields.entrySet()) {
             if (hashData.length() > 0) {

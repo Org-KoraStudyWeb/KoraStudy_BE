@@ -51,7 +51,7 @@ public class AdminCourseController {
             @RequestParam(required = false) Boolean isPublished
     ) {
         // Validate sortBy to prevent SQL injection
-        List<String> allowedSortFields = List.of("id", "courseName", "courseLevel", "coursePrice", "isPublished", "createdAt", "lastModified", "viewCount");
+        List<String> allowedSortFields = List.of("id", "courseName", "courseLevel", "coursePrice", "isPublished", "createdAt", "lastModified", "viewCount", "numberOfEnrollments", "numberOfLessons");
         if (!allowedSortFields.contains(sortBy)) {
             sortBy = "id"; // Default to id if invalid
         }

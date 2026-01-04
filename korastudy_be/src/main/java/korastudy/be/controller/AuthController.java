@@ -103,7 +103,7 @@ public class AuthController {
     @PostMapping("/reset-password")
     public ResponseEntity<ApiSuccess> resetPassword(@Valid @RequestBody PasswordResetRequest request) {
 
-        // 🔐 Xác thực token trước khi reset
+        //Xác thực token trước khi reset
         accountService.resetPassword(request.getToken(), request.getNewPassword());
         return ResponseEntity.ok(ApiSuccess.of("Đặt lại mật khẩu thành công"));
     }

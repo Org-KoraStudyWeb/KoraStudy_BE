@@ -71,10 +71,6 @@ public class AdminPaymentController {
     /*
      * TÌM KIẾM thanh toán với nhiều điều kiện
      */
-
-    /*
-     * TÌM KIẾM thanh toán với nhiều điều kiện
-     */
     @GetMapping("/search")
     public ResponseEntity<Map<String, Object>> searchPayments(
             @RequestParam(required = false) String keyword,
@@ -87,10 +83,40 @@ public class AdminPaymentController {
             @RequestParam(required = false) String sortBy,  // ← THÊM sortBy riêng
             @RequestParam(required = false) String sortDirection) { // ← THÊM sortDirection riêng
 
-        // Tạo sort đơn giản
+        // Create sort with field mapping
         Sort sort;
-        if (sortBy != null && sortDirection != null) {
-            sort = sortDirection.equalsIgnoreCase("asc")
+        if (sortBy != null && !sortBy.isEmpty()) {
+            // Map frontend sort fields to entity fields
+            switch (sortBy) {
+                case "amount":
+                    sortBy = "transactionPrice";
+                    break;
+                case "status":
+                    sortBy = "transactionStatus";
+                    break;
+                case "date":
+                case "paymentDate":
+                    sortBy = "dateTransaction";
+                    break;
+                case "courseName": // Assuming frontend might send this, though entity has 'course' relation, sorting by nested property might work if nested property is supported, but 'course.courseName' is safer
+                    sortBy = "course.courseName";
+                    break;
+                case "buyer":
+                    sortBy = "buyerName";
+                    break;
+            }
+            
+            // Validate allowable fields to prevent exceptions
+            List<String> allowedFields = List.of(
+                "id", "transactionPrice", "transactionStatus", "dateTransaction", 
+                "transactionCode", "buyerName", "buyerEmail", "paymentMethod", "course.courseName"
+            );
+            
+            if (!allowedFields.contains(sortBy)) {
+                sortBy = "dateTransaction"; // Fallback to default
+            }
+
+            sort = (sortDirection != null && sortDirection.equalsIgnoreCase("asc"))
                     ? Sort.by(sortBy).ascending()
                     : Sort.by(sortBy).descending();
         } else {

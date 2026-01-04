@@ -116,7 +116,7 @@ public class CourseService implements ICourseService {
     @Override
     public CourseDTO mapToDTO(Course course) {
         // Tính toán số lượng đăng ký
-        int enrollmentCount = enrollmentRepository.countByCourseId(course.getId());
+        Long enrollmentCount = course.getNumberOfEnrollments() != null ? course.getNumberOfEnrollments() : 0L;
 
         // Tính toán đánh giá trung bình
         Double avgRating = reviewRepository.findAverageRatingByCourseId(course.getId());
@@ -125,7 +125,23 @@ public class CourseService implements ICourseService {
         // Lấy danh sách sections
         List<SectionDTO> sectionDTOs = course.getSections() != null ? course.getSections().stream().map(sectionService::mapToDTO).collect(Collectors.toList()) : List.of();
 
-        return CourseDTO.builder().id(course.getId()).courseName(course.getCourseName()).courseDescription(course.getCourseDescription()).courseImageUrl(course.getCourseImageUrl()).courseLevel(course.getCourseLevel()).coursePrice(course.getCoursePrice()).isFree(course.isFree()).isPublished(course.isPublished()).viewCount(course.getViewCount()).createdAt(course.getCreatedAt()).lastModified(course.getLastModified()).sections(sectionDTOs).averageRating(averageRating).enrollmentCount(enrollmentCount).build();
+        return CourseDTO.builder()
+                .id(course.getId())
+                .courseName(course.getCourseName())
+                .courseDescription(course.getCourseDescription())
+                .courseImageUrl(course.getCourseImageUrl())
+                .courseLevel(course.getCourseLevel())
+                .coursePrice(course.getCoursePrice())
+                .isFree(course.isFree())
+                .isPublished(course.isPublished())
+                .viewCount(course.getViewCount())
+                .createdAt(course.getCreatedAt())
+                .lastModified(course.getLastModified())
+                .sections(sectionDTOs)
+                .averageRating(averageRating)
+                .enrollmentCount(enrollmentCount.intValue())
+                .numberOfLessons(course.getNumberOfLessons() != null ? course.getNumberOfLessons() : 0L)
+                .build();
     }
 
     @Override
