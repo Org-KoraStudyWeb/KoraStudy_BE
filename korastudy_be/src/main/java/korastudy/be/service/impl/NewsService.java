@@ -4,6 +4,7 @@ import korastudy.be.dto.request.news.CommentRequest;
 import korastudy.be.dto.request.news.ReadingProgressRequest;
 import korastudy.be.dto.request.news.SaveVocabToFlashcardRequest;
 import korastudy.be.dto.response.news.*;
+import korastudy.be.entity.Enum.ArticleStatus;
 import korastudy.be.entity.FlashCard.Card;
 import korastudy.be.entity.FlashCard.SetCard;
 import korastudy.be.entity.news.*;
@@ -77,6 +78,11 @@ public class NewsService implements INewsService {
     public NewsArticleResponse getArticleById(Long articleId, String username) {
         NewsArticle article = newsArticleRepository.findById(articleId)
             .orElseThrow(() -> new NotFoundException("Article not found"));
+        
+        // Block access to non-published articles for regular users
+        if (article.getStatus() != ArticleStatus.PUBLISHED) {
+            throw new NotFoundException("Article not available");
+        }
         
         User user = username != null ? userRepository.findByUsername(username).orElse(null) : null;
         

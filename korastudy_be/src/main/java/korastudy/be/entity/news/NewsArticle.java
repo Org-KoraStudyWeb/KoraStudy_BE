@@ -2,6 +2,7 @@ package korastudy.be.entity.news;
 
 import jakarta.persistence.*;
 import korastudy.be.entity.BaseEntity.BaseTimeEntity;
+import korastudy.be.entity.Enum.ArticleStatus;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -57,6 +58,11 @@ public class NewsArticle extends BaseTimeEntity {
 
     @Column(length = 20)
     private String difficultyLevel; // BEGINNER, INTERMEDIATE, ADVANCED
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20, nullable = false)
+    @Builder.Default
+    private ArticleStatus status = ArticleStatus.DRAFT; // DRAFT, SCHEDULED, PUBLISHED
 
     // Media
     @Column(length = 1000)

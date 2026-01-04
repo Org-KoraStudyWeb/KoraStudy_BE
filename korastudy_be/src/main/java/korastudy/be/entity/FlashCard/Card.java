@@ -2,6 +2,7 @@ package korastudy.be.entity.FlashCard;
 
 import jakarta.persistence.*;
 import korastudy.be.entity.BaseEntity.BaseTimeEntity;
+import korastudy.be.entity.news.NewsFlashcardMapping;
 import lombok.*;
 
 import java.util.ArrayList;
@@ -38,6 +39,11 @@ public class Card extends BaseTimeEntity {
 
     @OneToMany(mappedBy = "card", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<UserCardProgress> progresses = new ArrayList<>();
+
+    // Cascade delete for news flashcard mappings
+    @OneToMany(mappedBy = "card", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<NewsFlashcardMapping> newsFlashcardMappings = new ArrayList<>();
 
 }
 

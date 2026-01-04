@@ -26,13 +26,28 @@ public interface NewsArticleRepository extends JpaRepository<NewsArticle, Long> 
            "LOWER(a.content) LIKE LOWER(CONCAT('%', :keyword, '%'))")
     Page<NewsArticle> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
     
-    // Find with filters
+    // Find with filters (for user - only PUBLISHED articles)
     @Query("SELECT a FROM NewsArticle a WHERE " +
+           "a.status = 'PUBLISHED' AND " +
            "(:topicId IS NULL OR a.newsTopic.id = :topicId) AND " +
            "(:level IS NULL OR a.difficultyLevel = :level) AND " +
            "(:keyword IS NULL OR LOWER(a.title) LIKE LOWER(CONCAT('%', :keyword, '%')))")
     Page<NewsArticle> findWithFilters(
         @Param("topicId") Long topicId,
+        @Param("level") String level,
+        @Param("keyword") String keyword,
+        Pageable pageable
+    );
+    
+    // Admin: Find with filters including status
+    @Query("SELECT a FROM NewsArticle a WHERE " +
+           "(:topicId IS NULL OR a.newsTopic.id = :topicId) AND " +
+           "(:status IS NULL OR CAST(a.status AS string) = :status) AND " +
+           "(:level IS NULL OR a.difficultyLevel = :level) AND " +
+           "(:keyword IS NULL OR LOWER(a.title) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+    Page<NewsArticle> findAllWithFiltersForAdmin(
+        @Param("topicId") Long topicId,
+        @Param("status") String status,
         @Param("level") String level,
         @Param("keyword") String keyword,
         Pageable pageable
