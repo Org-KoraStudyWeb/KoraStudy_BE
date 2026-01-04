@@ -19,4 +19,6 @@ public class OptionCreateRequest {
     private Boolean isCorrect;
 
     private String imageUrl;
+
+    private Integer orderIndex;
 }
