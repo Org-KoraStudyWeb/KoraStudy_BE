@@ -18,9 +18,11 @@ import java.util.List;
 public class AdminExamService {
     
     private final MockTestRepository mockTestRepo;
-    private final MockTestPartRepository partRepo;
+    private final   MockTestPartRepository partRepo;
     private final MockTestQuestionRepository questionRepo;
     private final MockTestAnswersRepository answersRepo;
+    private final ComprehensiveTestResultRepository resultRepo;
+    private final ReviewRepository reviewRepo;
 
     public List<ExamListItemResponse> getAllExamsForAdmin() {
         List<MockTest> tests = mockTestRepo.findAll();
@@ -38,6 +40,14 @@ public class AdminExamService {
             dto.setCreatedAt(test.getCreatedAt());
             dto.setUpdatedAt(test.getUpdatedAt());
             dto.setIsActive(test.getIsActive());
+            // Đếm số người đã làm bài thi này
+            Long totalTaken = resultRepo.countDistinctUsersByMockTestId(test.getId());
+            dto.setTotalTaken(totalTaken != null ? totalTaken : 0L);
+            // Lấy rating trung bình và số lượt đánh giá
+            Double avgRating = reviewRepo.findAverageRatingByMockTestId(test.getId());
+            dto.setAverageRating(avgRating != null ? avgRating : 0.0);
+            long reviewCount = reviewRepo.countByMockTestIdAndStatus(test.getId(), korastudy.be.entity.Enum.ReviewStatus.ACTIVE);
+            dto.setReviewCount(reviewCount);
             dtos.add(dto);
         }
         return dtos;
