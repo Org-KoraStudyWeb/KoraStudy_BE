@@ -18,6 +18,9 @@ public class ExamListItemResponse {
     private Integer totalPart;
     private Integer durationTimes;
     private Boolean isActive;
+    private Long totalTaken; // Số người đã làm bài
+    private Double averageRating; // Điểm đánh giá trung bình (1-5)
+    private Long reviewCount; // Số lượt đánh giá
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

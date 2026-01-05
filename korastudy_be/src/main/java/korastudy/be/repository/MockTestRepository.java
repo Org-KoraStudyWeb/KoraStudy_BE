@@ -13,6 +13,9 @@ public interface MockTestRepository extends JpaRepository<MockTest, Long> {
 
     List<MockTest> findByLevel(String level);
 
+    // Lấy các bài thi đang hoạt động cho user
+    List<MockTest> findByIsActiveTrue();
+
     @Query("SELECT m FROM MockTest m WHERE " +
             "(:title IS NULL OR :title = '' OR LOWER(m.title) LIKE LOWER(CONCAT('%', :title, '%'))) AND " +
             "(:level IS NULL OR :level = '' OR m.level = :level) AND " +

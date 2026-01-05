@@ -25,9 +25,11 @@ public class ExamService {
     private final PracticeTestResultRepository practiceResultRepo;
     private final ExamCommentRepository commentRepo;
     private final UserStudyActivityService studyActivityService;
+    private final ReviewRepository reviewRepo;
 
     public List<ExamListItemResponse> getAllExams() {
-        List<MockTest> tests = mockTestRepo.findAll();
+        // Chỉ lấy các bài thi đang active cho user
+        List<MockTest> tests = mockTestRepo.findByIsActiveTrue();
         List<ExamListItemResponse> dtos = new ArrayList<>();
         for (MockTest t : tests) {
             ExamListItemResponse dto = new ExamListItemResponse();
@@ -38,6 +40,14 @@ public class ExamService {
             dto.setTotalQuestions(t.getTotalQuestions());
             dto.setTotalPart(t.getTotalParts()); // Cần thêm trường này vào MockTest entity
             dto.setDurationTimes(t.getDurationTimes()); // Cần thêm trường này vào MockTest entity
+            // Đếm số người đã làm bài thi này
+            Long totalTaken = resultRepo.countDistinctUsersByMockTestId(t.getId());
+            dto.setTotalTaken(totalTaken != null ? totalTaken : 0L);
+            // Lấy rating trung bình và số lượt đánh giá
+            Double avgRating = reviewRepo.findAverageRatingByMockTestId(t.getId());
+            dto.setAverageRating(avgRating != null ? avgRating : 0.0);
+            long reviewCount = reviewRepo.countByMockTestIdAndStatus(t.getId(), korastudy.be.entity.Enum.ReviewStatus.ACTIVE);
+            dto.setReviewCount(reviewCount);
             dtos.add(dto);
         }
         return dtos;
