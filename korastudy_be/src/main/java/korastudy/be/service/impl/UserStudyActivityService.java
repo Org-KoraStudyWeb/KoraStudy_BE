@@ -18,8 +18,11 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class UserStudyActivityService {
 
-    private final UserStudyActivityRepository activityRepo;
-    private final UserRepository userRepo;
+    private final korastudy.be.repository.ComprehensiveTestResultRepository comprehensiveTestResultRepository;
+    private final korastudy.be.repository.PracticeTestResultRepository practiceTestResultRepository;
+    private final korastudy.be.repository.TestResultRepository testResultRepository;
+    private final korastudy.be.repository.UserStudyActivityRepository activityRepo;
+    private final korastudy.be.repository.UserRepository userRepo;
 
     /**
      * Ghi nhận hoạt động học tập của user (gọi khi user làm bài thi, flashcard, xem bài học...)
@@ -98,7 +101,7 @@ public class UserStudyActivityService {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
 
         Integer totalMinutes = activityRepo.getTotalStudyMinutes(user);
-        return totalMinutes / 60; // Convert to hours
+        return totalMinutes != null ? totalMinutes / 60 : 0;
     }
 
     /**
@@ -112,7 +115,74 @@ public class UserStudyActivityService {
         
         stats.put("studyStreak", streak);
         stats.put("totalStudyHours", totalHours);
+        stats.put("recentDetailedActivities", getRecentDetailedActivities(userId));
         
         return stats;
+    }
+
+    /**
+     * Lấy danh sách hoạt động chi tiết gần đây (Exam, Quiz...)
+     */
+    public List<korastudy.be.dto.response.user.UserRecentActivityResponse> getRecentDetailedActivities(Long userId) {
+        List<korastudy.be.dto.response.user.UserRecentActivityResponse> activities = new java.util.ArrayList<>();
+        
+        // 1. Lấy kết quả thi tổng hợp (Comprehensive)
+        // Lấy top 5
+        List<korastudy.be.entity.MockTest.ComprehensiveTestResult> comprehensiveResults = 
+            comprehensiveTestResultRepository.findByUserIdOrderByCreatedAtDesc(userId);
+            
+        comprehensiveResults.stream().limit(5).forEach(result -> {
+            activities.add(korastudy.be.dto.response.user.UserRecentActivityResponse.builder()
+                .id(result.getId())
+                .title("Bài thi thử: " + (result.getMockTest() != null ? result.getMockTest().getTitle() : "N/A"))
+                .type(korastudy.be.dto.response.user.UserRecentActivityResponse.ActivityType.COMPREHENSIVE_TEST)
+                .timestamp(result.getCreatedAt())
+                .score(result.getScores() != null ? String.format("%.1f", result.getScores()) : "N/A")
+                .result(result.getScores() != null && result.getScores() >= 5.0 ? "Đạt" : "Không đạt") // Giả sử >= 5 là đạt
+                .build());
+        });
+
+        // 2. Lấy kết quả thi luyện tập (Practice)
+        User user = userRepo.findById(userId).orElse(null);
+        if (user != null) {
+            List<korastudy.be.entity.MockTest.PracticeTestResult> practiceResults = 
+                practiceTestResultRepository.findByUserOrderByTestDateDesc(user);
+                
+            practiceResults.stream().limit(5).forEach(result -> {
+                activities.add(korastudy.be.dto.response.user.UserRecentActivityResponse.builder()
+                    .id(result.getId())
+                    .title("Luyện tập: " + (result.getMockTest() != null ? result.getMockTest().getTitle() : "N/A"))
+                    .type(korastudy.be.dto.response.user.UserRecentActivityResponse.ActivityType.PRACTICE_TEST)
+                    .timestamp(result.getTestDate())
+                    .score(result.getScores() != null ? String.format("%.1f", result.getScores()) : "N/A")
+                    .result(null) // Luyện tập thường không xét Đạt/Không đạt
+                    .build());
+            });
+        }
+
+        // 3. Lấy kết quả bài học (Quiz)
+        List<korastudy.be.entity.Course.TestResult> quizResults = 
+            testResultRepository.findByUserIdOrderByTakenDateDesc(userId);
+            
+        quizResults.stream().limit(5).forEach(result -> {
+            activities.add(korastudy.be.dto.response.user.UserRecentActivityResponse.builder()
+                .id(result.getId())
+                .title("Bài kiểm tra: " + (result.getQuiz() != null ? result.getQuiz().getTitle() : "N/A"))
+                .type(korastudy.be.dto.response.user.UserRecentActivityResponse.ActivityType.QUIZ)
+                .timestamp(result.getTakenDate())
+                .score(result.getScore() != null ? String.format("%.1f", result.getScore()) : "N/A")
+                .result(Boolean.TRUE.equals(result.getIsPassed()) ? "Đạt" : "Cần cố gắng")
+                .build());
+        });
+
+        // 4. Sắp xếp lại tổng thể theo thời gian giảm dần
+        activities.sort((a, b) -> b.getTimestamp().compareTo(a.getTimestamp()));
+        
+        // 5. Lấy top 10 hoạt động mới nhất
+        if (activities.size() > 10) {
+            return activities.subList(0, 10);
+        }
+        
+        return activities;
     }
 }
