@@ -46,8 +46,16 @@ public class PostService implements IPostService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<PostResponse> getAllPosts() {
-    return postRepository.findAllByDeletedAtIsNull().stream()
+    public List<PostResponse> getAllPosts(Long categoryId) {
+        List<Post> posts;
+        
+        if (categoryId != null) {
+            posts = postRepository.findAllByCategories_IdAndDeletedAtIsNull(categoryId);
+        } else {
+            posts = postRepository.findAllByDeletedAtIsNull();
+        }
+
+        return posts.stream()
                 .filter(post -> post.getPostStatus() == null || post.getPostStatus() == PostStatus.APPROVED)
                 .filter(post -> Boolean.TRUE.equals(post.getPublished()))
                 .map(PostResponse::fromEntity)
@@ -55,9 +63,14 @@ public class PostService implements IPostService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional // Removed readOnly = true to allow update
     public PostResponse getPostById(Long id) {
-    Post post = getPostEntityById(id);
+        Post post = getPostEntityById(id);
+        
+        // Increment view count
+        post.setViewCount((post.getViewCount() == null ? 0 : post.getViewCount()) + 1);
+        postRepository.save(post);
+        
         return PostResponse.fromEntity(post);
     }
 

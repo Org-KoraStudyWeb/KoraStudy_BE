@@ -50,7 +50,7 @@ public class UploadController {
 
     // ============ EXISTING ENDPOINTS ============
     @PostMapping("/image")
-    @PreAuthorize("hasAnyRole('CONTENT_MANAGER', 'ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> uploadImage(@RequestParam("file") MultipartFile file) {
         try {
             String url = uploadService.uploadImage(file);

@@ -17,6 +17,7 @@ public interface PostRepository extends JpaRepository<Post, Long>, JpaSpecificat
 
     // Soft delete helpers
     List<Post> findAllByDeletedAtIsNull();
+    List<Post> findAllByCategories_IdAndDeletedAtIsNull(Long categoryId);
     java.util.Optional<Post> findByIdAndDeletedAtIsNull(Long id);
 
     @Query("SELECT SUM(p.viewCount) FROM Post p")

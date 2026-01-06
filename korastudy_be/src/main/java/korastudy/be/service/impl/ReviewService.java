@@ -15,6 +15,8 @@ import korastudy.be.entity.Review.ReviewReport;
 import korastudy.be.entity.User.User;
 import korastudy.be.exception.ResourceNotFoundException;
 import korastudy.be.repository.*;
+import korastudy.be.entity.news.NewsArticle; // Added import
+import korastudy.be.repository.news.NewsArticleRepository;
 import korastudy.be.service.IEnrollmentService;
 import korastudy.be.service.IReviewService;
 import lombok.RequiredArgsConstructor;
@@ -42,6 +44,7 @@ public class ReviewService implements IReviewService {
     private final UserRepository userRepository;
     private final CourseRepository courseRepository;
     private final MockTestRepository mockTestRepository;
+    private final NewsArticleRepository newsArticleRepository; // Added repository
     private final IEnrollmentService enrollmentService;
 
     @Override
@@ -55,6 +58,7 @@ public class ReviewService implements IReviewService {
         return switch (request.getReviewType()) {
             case COURSE -> addCourseReview(user, request);
             case MOCK_TEST -> addMockTestReview(user, request);
+            case NEWS -> addNewsReview(user, request); // Handle NEWS
         };
     }
 
@@ -85,6 +89,30 @@ public class ReviewService implements IReviewService {
         return mapToDTO(savedReview);
     }
 
+    private ReviewDTO addNewsReview(User user, ReviewRequest request) {
+        Long newsArticleId = request.getTargetId();
+        
+        // News comments don't need "enrollment" check, maybe just check if article exists
+        NewsArticle article = newsArticleRepository.findById(newsArticleId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy bài báo với ID: " + newsArticleId));
+        
+        // Allow multiple comments on news? usually yes. If no, use checkExistingReview.
+        // Assuming we allow multiple comments for news (like discussion).
+        // If we want to limit 1 review per user like Course, uncomment below:
+        // checkExistingReview(user.getId(), newsArticleId, ReviewType.NEWS); 
+
+        // Force rating to 0 if null
+        if (request.getRating() == null) {
+            request.setRating(0);
+        }
+
+        Review review = createReview(user, request, null, null, article);
+        Review savedReview = reviewRepository.save(review);
+
+        log.info("Added comment (review) for news article: {}, by user: {}", newsArticleId, user.getId());
+        return mapToDTO(savedReview);
+    }
+
     @Override
     @Transactional
     public ReviewDTO updateReview(Long userId, Long reviewId, ReviewRequest request) {
@@ -94,8 +122,12 @@ public class ReviewService implements IReviewService {
         validateReviewIsActive(review);
 
         // THÊM VALIDATION
-        if (request.getRating() < 1 || request.getRating() > 5) {
-            throw new IllegalArgumentException("Rating must be between 1 and 5");
+        if (request.getReviewType() != ReviewType.NEWS && (request.getRating() < 1 || request.getRating() > 5)) {
+             throw new IllegalArgumentException("Rating must be between 1 and 5");
+        }
+        // For news, allow 0
+        if (request.getReviewType() == ReviewType.NEWS && (request.getRating() < 0 || request.getRating() > 5)) {
+             throw new IllegalArgumentException("Rating must be between 0 and 5");
         }
 
         review.setRating(request.getRating());
@@ -266,6 +298,14 @@ public class ReviewService implements IReviewService {
     }
 
     @Override
+    public List<ReviewDTO> getNewsReviews(Long newsArticleId) {
+        List<Review> reviews = reviewRepository.findByNewsArticleIdAndStatus(newsArticleId, ReviewStatus.ACTIVE);
+        return reviews.stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
     public Page<ReviewDTO> getCourseReviewsWithPagination(Long courseId, Pageable pageable) {
         return getCourseReviewsWithPagination(courseId, pageable, null);
     }
@@ -282,6 +322,12 @@ public class ReviewService implements IReviewService {
     }
 
     @Override
+    public Page<ReviewDTO> getNewsReviewsWithPagination(Long newsArticleId, Pageable pageable) {
+        Page<Review> reviewPage = reviewRepository.findByNewsArticleIdAndStatus(newsArticleId, ReviewStatus.ACTIVE, pageable);
+        return reviewPage.map(this::mapToDTO);
+    }
+
+    @Override
     public long countReviewsByCourseId(Long courseId) {
         return reviewRepository.countByCourseIdAndStatus(courseId, ReviewStatus.ACTIVE);
     }
@@ -289,6 +335,11 @@ public class ReviewService implements IReviewService {
     @Override
     public long countReviewsByMockTestId(Long mockTestId) {
         return reviewRepository.countByMockTestIdAndStatus(mockTestId, ReviewStatus.ACTIVE);
+    }
+
+    @Override
+    public long countReviewsByNewsArticleId(Long newsArticleId) {
+        return reviewRepository.countByNewsArticleIdAndStatus(newsArticleId, ReviewStatus.ACTIVE);
     }
 
     @Override
@@ -325,7 +376,7 @@ public class ReviewService implements IReviewService {
                 reviewType = ReviewType.valueOf(targetType.trim().toUpperCase());
             } catch (IllegalArgumentException e) {
                 log.warn("Invalid review type: {}", targetType);
-                throw new IllegalArgumentException("Invalid review type. Use: COURSE, MOCK_TEST");
+                throw new IllegalArgumentException("Invalid review type. Use: COURSE, MOCK_TEST, NEWS");
             }
         }
 
@@ -398,6 +449,14 @@ public class ReviewService implements IReviewService {
                         .targetType("MOCK_TEST");
             } else {
                 log.warn("Review {} is MOCK_TEST type but mockTest is null", review.getId());
+            }
+        } else if (review.getReviewType() == ReviewType.NEWS) {
+            if (review.getNewsArticle() != null) {
+                builder.targetId(review.getNewsArticle().getId())
+                        .targetTitle(review.getNewsArticle().getTitle())
+                        .targetType("NEWS");
+            } else {
+                log.warn("Review {} is NEWS type but newsArticle is null", review.getId());
             }
         }
 
@@ -618,15 +677,22 @@ public class ReviewService implements IReviewService {
     }
 
     private Review createReview(User user, ReviewRequest request, Course course, MockTest mockTest) {
-        // Validate rating
-        if (request.getRating() < 1 || request.getRating() > 5) {
-            throw new IllegalArgumentException("Rating must be between 1 and 5");
+        return createReview(user, request, course, mockTest, null);
+    }
+
+    private Review createReview(User user, ReviewRequest request, Course course, MockTest mockTest, NewsArticle newsArticle) {
+        // Validate rating - Modified to support 0 for NEWS
+        int minRating = (request.getReviewType() == ReviewType.NEWS) ? 0 : 1;
+        
+        if (request.getRating() < minRating || request.getRating() > 5) {
+            throw new IllegalArgumentException("Rating must be between " + minRating + " and 5");
         }
 
         return Review.builder()
                 .user(user)
                 .course(course)
                 .mockTest(mockTest)
+                .newsArticle(newsArticle) // Set newsArticle
                 .reviewType(request.getReviewType())
                 .rating(request.getRating())
                 .comment(request.getComment())
