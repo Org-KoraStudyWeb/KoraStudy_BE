@@ -23,7 +23,7 @@ public class AccountDetailsServiceImpl implements UserDetailsService {
     @Override
     @Transactional
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        Account account = accountRepository.findActiveAccountByUsername(username).orElseThrow(() -> new UsernameNotFoundException("Không tìm thấy tài khoản: " + username));
+        Account account = accountRepository.findActiveAccountByUsernameOrEmail(username).orElseThrow(() -> new UsernameNotFoundException("Không tìm thấy tài khoản: " + username));
         return AccountDetailsImpl.build(account);
     }
 }

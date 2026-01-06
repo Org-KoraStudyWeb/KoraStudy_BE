@@ -43,6 +43,9 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
      */
 
     // Tìm tài khoản đang hoạt động (cho login)
+    @Query("SELECT a FROM Account a WHERE (a.username = :keyword OR a.email = :keyword) AND a.isEnabled = true ")
+    Optional<Account> findActiveAccountByUsernameOrEmail(@Param("keyword") String keyword);
+
     @Query("SELECT a FROM Account a WHERE a.username = :username AND a.isEnabled = true ")
     Optional<Account> findActiveAccountByUsername(@Param("username") String username);
 
