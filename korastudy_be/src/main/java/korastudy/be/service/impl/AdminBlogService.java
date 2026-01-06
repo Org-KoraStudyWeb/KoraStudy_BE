@@ -158,6 +158,15 @@ public class AdminBlogService implements IAdminBlogService {
             post.setPublished(false);
         }
 
+        // Cập nhật categories
+        if (request.getCategoryIds() != null) {
+            post.getCategories().clear();
+            if (!request.getCategoryIds().isEmpty()) {
+                List<Category> categories = categoryRepository.findAllById(request.getCategoryIds());
+                categories.forEach(post::addCategory);
+            }
+        }
+        
         // Cập nhật metas
         post.getMetas().clear();
         if (request.getPostMetas() != null) {

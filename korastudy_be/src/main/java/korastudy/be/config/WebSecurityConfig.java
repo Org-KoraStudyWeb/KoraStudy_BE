@@ -43,6 +43,7 @@ public class WebSecurityConfig {
                             "https://witty-water-06494e100.6.azurestaticapps.net", // user
                             "https://witty-mud-0560bb800.2.azurestaticapps.net",   // admin
                             "http://localhost:3000",
+                            "http://localhost:3001",
                             "http://localhost:3030",
                             "http://localhost:8080"
                     ));

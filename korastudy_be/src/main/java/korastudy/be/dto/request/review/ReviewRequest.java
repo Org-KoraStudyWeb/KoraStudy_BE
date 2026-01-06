@@ -17,10 +17,10 @@ public class ReviewRequest {
     private ReviewType reviewType; // COURSE hoặc MOCK_TEST
 
     @NotNull(message = "ID không được để trống")
-    private Long targetId; // courseId hoặc mockTestId tùy theo reviewType
+    private Long targetId; // courseId, mockTestId, hoặc newsArticleId tùy theo reviewType
 
-    @Min(value = 1, message = "Đánh giá phải từ 1 đến 5 sao")
-    @Max(value = 5, message = "Đánh giá phải từ 1 đến 5 sao")
+    @Min(value = 0, message = "Đánh giá phải từ 0 đến 5 sao")
+    @Max(value = 5, message = "Đánh giá phải từ 0 đến 5 sao")
     private Integer rating;
 
     @NotBlank(message = "Nội dung đánh giá không được để trống")

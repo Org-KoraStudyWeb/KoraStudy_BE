@@ -5,7 +5,9 @@ import korastudy.be.entity.BaseEntity.BaseTimeEntity;
 import korastudy.be.entity.Course.Course;
 import korastudy.be.entity.Enum.ReviewStatus;
 import korastudy.be.entity.Enum.ReviewType;
+import korastudy.be.entity.Enum.ReviewType;
 import korastudy.be.entity.MockTest.MockTest;
+import korastudy.be.entity.news.NewsArticle;
 import lombok.*;
 
 import korastudy.be.entity.User.User;
@@ -42,6 +44,10 @@ public class Review extends BaseTimeEntity {
     @ManyToOne
     @JoinColumn(name = "mock_test_id")
     private MockTest mockTest; // Có thể NULL nếu review cho Course
+    
+    @ManyToOne
+    @JoinColumn(name = "news_article_id")
+    private NewsArticle newsArticle; // Có thể NULL nếu không phải NEWS
 
     @ManyToOne
     @JoinColumn(name = "user_id")

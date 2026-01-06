@@ -17,14 +17,16 @@ public class PostResponse {
     private Boolean postPublished;
     private String featuredImage;
     private PostStatus postStatus;
+    private Integer viewCount; // Added field
 
-    // ✅ Dành cho FE: tên gộp sẵn
+    //  Dành cho FE: tên gộp sẵn
     private String authorName;
 
-    // ✅ Nếu cần chi tiết account
+    //  Nếu cần chi tiết account
     private AccountResponse createdBy;
 
     private List<PostMetaResponse> postMetas;
+    private List<CategoryResponse> categories; // Added categories list
 
     public static PostResponse fromEntity(Post post) {
         PostResponse response = new PostResponse();
@@ -35,6 +37,7 @@ public class PostResponse {
         response.setPostPublished(post.getPublished());
         response.setFeaturedImage(post.getFeaturedImage());
         response.setPostStatus(post.getPostStatus());
+        response.setViewCount(post.getViewCount() == null ? 0 : post.getViewCount()); // Added viewCount
 
         // ✅ Lấy tác giả
         if (post.getCreatedBy() != null) {
@@ -43,11 +46,19 @@ public class PostResponse {
             response.setAuthorName(formatUserName(author));
         }
 
-        // ✅ Lấy metas nếu có
         if (post.getMetas() != null && !post.getMetas().isEmpty()) {
             response.setPostMetas(
                     post.getMetas().stream()
                             .map(PostMetaResponse::fromEntity)
+                            .toList()
+            );
+        }
+
+        // ✅ Lấy categories
+        if (post.getCategories() != null && !post.getCategories().isEmpty()) {
+            response.setCategories(
+                    post.getCategories().stream()
+                            .map(CategoryResponse::fromEntity)
                             .toList()
             );
         }

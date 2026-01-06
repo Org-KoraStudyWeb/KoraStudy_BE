@@ -44,6 +44,16 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     @Query("SELECT AVG(r.rating) FROM Review r WHERE r.mockTest.id = :mockTestId AND r.status = 'ACTIVE'")
     Double findAverageRatingByMockTestId(@Param("mockTestId") Long mockTestId);
 
+    // News reviews
+    List<Review> findByNewsArticleIdAndStatus(Long newsArticleId, ReviewStatus status);
+
+    Page<Review> findByNewsArticleIdAndStatus(Long newsArticleId, ReviewStatus status, Pageable pageable);
+
+    @Query("SELECT COUNT(r) FROM Review r WHERE r.newsArticle.id = :newsArticleId AND r.status = :status")
+    long countByNewsArticleIdAndStatus(@Param("newsArticleId") Long newsArticleId, @Param("status") ReviewStatus status);
+
+    Optional<Review> findByUserIdAndNewsArticleId(Long userId, Long newsArticleId);
+
     // User reviews
     List<Review> findByUserIdAndStatus(Long userId, ReviewStatus status);
 
@@ -66,7 +76,8 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     @Query("SELECT r FROM Review r WHERE " +
             "r.user.id = :userId AND " +
             "((r.reviewType = 'COURSE' AND r.course.id = :targetId) OR " +
-            "(r.reviewType = 'MOCK_TEST' AND r.mockTest.id = :targetId))")
+            "(r.reviewType = 'MOCK_TEST' AND r.mockTest.id = :targetId) OR " +
+            "(r.reviewType = 'NEWS' AND r.newsArticle.id = :targetId))")
     Optional<Review> findByUserIdAndTargetId(
             @Param("userId") Long userId,
             @Param("targetId") Long targetId);

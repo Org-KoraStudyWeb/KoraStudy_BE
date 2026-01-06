@@ -12,7 +12,7 @@ import java.util.List;
 public interface IPostService {
 
     // Public endpoints
-    List<PostResponse> getAllPosts();
+    List<PostResponse> getAllPosts(Long categoryId);
     PostResponse getPostById(Long id);
     List<PostMetaResponse> getPostMeta(Long id);
 
