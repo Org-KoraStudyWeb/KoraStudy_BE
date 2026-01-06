@@ -27,7 +27,7 @@ public interface ICourseService {
 
     List<CourseDTO> searchCourses(String keyword);
 
-    List<CourseDTO> searchCoursesAdvanced(String keyword, String level, Double minPrice, Double maxPrice, LocalDateTime startDate, LocalDateTime endDate, Pageable pageable);
+    List<CourseDTO> searchCoursesAdvanced(String keyword, String level, Double minPrice, Double maxPrice, Boolean isPublished, LocalDateTime startDate, LocalDateTime endDate, Pageable pageable);
 
     CourseDTO mapToDTO(Course course);
 

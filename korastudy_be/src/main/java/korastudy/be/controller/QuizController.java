@@ -28,6 +28,7 @@ public class QuizController {
 
     private final IQuizService quizService;
     private final AccountRepository accountRepository;
+    private final korastudy.be.service.ExcelImportService excelImportService;
 
     // ==================== PHƯƠNG THỨC HỖ TRỢ ====================
 
@@ -90,6 +91,18 @@ public class QuizController {
     public ResponseEntity<QuestionDTO> addQuestionToQuiz(@PathVariable Long quizId, @Valid @RequestBody QuestionCreateRequest request) {
         QuestionDTO questionDTO = quizService.addQuestionToQuiz(quizId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(questionDTO);
+    }
+
+    @PostMapping(value = "/{quizId}/import-questions", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAnyRole('CONTENT_MANAGER', 'ADMIN')")
+    public ResponseEntity<List<QuestionDTO>> importQuestionsFromExcel(@PathVariable Long quizId, @RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
+        try {
+            List<QuestionCreateRequest> questions = excelImportService.parseExcelFile(file);
+            List<QuestionDTO> addedQuestions = quizService.addQuestionsToQuiz(quizId, questions);
+            return ResponseEntity.ok(addedQuestions);
+        } catch (java.io.IOException e) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 
     @PutMapping("/questions/{questionId}")

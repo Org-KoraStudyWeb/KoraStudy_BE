@@ -46,6 +46,9 @@ public interface IReviewService {
     // 8. Tính điểm trung bình rating của bài thi
     double getAverageMockTestRating(Long mockTestId);
 
+    // News Reviews (Comments)
+    List<ReviewDTO> getNewsReviews(Long newsArticleId);
+
 
     // 9. Phân trang reviews của khóa học
     Page<ReviewDTO> getCourseReviewsWithPagination(Long courseId, Pageable pageable);
@@ -53,11 +56,17 @@ public interface IReviewService {
     // 10. Phân trang reviews của bài thi
     Page<ReviewDTO> getMockTestReviewsWithPagination(Long mockTestId, Pageable pageable);
 
+    // Phân trang reviews của News
+    Page<ReviewDTO> getNewsReviewsWithPagination(Long newsArticleId, Pageable pageable);
+
     // 11. Đếm số review của khóa học
     long countReviewsByCourseId(Long courseId);
 
     // 12. Đếm số review của bài thi
     long countReviewsByMockTestId(Long mockTestId);
+
+    // Đếm số review của News
+    long countReviewsByNewsArticleId(Long newsArticleId);
 
     // 13. Kiểm tra user đã review khóa học chưa
     boolean hasUserReviewedCourse(Long userId, Long courseId);

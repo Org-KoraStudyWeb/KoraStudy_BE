@@ -1,6 +1,7 @@
 package korastudy.be.dto.response.blog;
 
 import korastudy.be.entity.Enum.PostStatus;
+import korastudy.be.entity.Post.Category; // Added import
 import korastudy.be.entity.Post.Post;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -31,6 +32,7 @@ public class AdminPostResponse {
     private String authorUsername;
     private String authorName;
     private List<CategoryResponse> categories;
+    private List<Long> categoryIds; // Hỗ trợ frontend edit
     private List<PostMetaResponse> metas;
     private Integer commentCount;
 
@@ -53,6 +55,9 @@ public class AdminPostResponse {
                                 post.getCreatedBy().getUser().getLastName() : "")
                 .categories(post.getCategories().stream()
                         .map(CategoryResponse::fromEntity)
+                        .collect(Collectors.toList()))
+                .categoryIds(post.getCategories().stream()
+                        .map(Category::getId)
                         .collect(Collectors.toList()))
                 .metas(post.getMetas().stream()
                         .map(PostMetaResponse::fromEntity)

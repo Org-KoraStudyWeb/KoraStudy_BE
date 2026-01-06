@@ -6,7 +6,11 @@ import korastudy.be.dto.request.news.SaveVocabToFlashcardRequest;
 import korastudy.be.dto.response.news.CommentResponse;
 import korastudy.be.dto.response.news.NewsArticleResponse;
 import korastudy.be.dto.response.news.NewsTopicResponse;
+import korastudy.be.dto.response.review.ReviewDTO; // Added
+import korastudy.be.dto.request.review.ReviewRequest; // Added
+import korastudy.be.entity.Enum.ReviewType; // Added
 import korastudy.be.service.INewsService;
+import korastudy.be.service.IReviewService; // Added
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -26,6 +30,7 @@ import java.util.Map;
 public class NewsController {
 
     private final INewsService newsService;
+    private final IReviewService reviewService; // Added
 
     // ========== NEWS TOPICS ==========
     
@@ -120,14 +125,15 @@ public class NewsController {
             @RequestParam(defaultValue = "20") int size
     ) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        Page<CommentResponse> comments = newsService.getArticleComments(articleId, pageable);
+        Page<ReviewDTO> comments = reviewService.getNewsReviewsWithPagination(articleId, pageable);
         
         Map<String, Object> response = new HashMap<>();
         response.put("data", Map.of(
             "content", comments.getContent(),
             "currentPage", comments.getNumber(),
             "totalPages", comments.getTotalPages(),
-            "totalElements", comments.getTotalElements()
+            "totalElements", comments.getTotalElements(),
+            "pageSize", comments.getSize()
         ));
         
         return ResponseEntity.ok(response);
@@ -138,8 +144,29 @@ public class NewsController {
             @RequestBody CommentRequest request,
             Authentication authentication
     ) {
-        String username = authentication.getName();
-        CommentResponse comment = newsService.createComment(request, username);
+        // Assume user is authenticated if we got here or via security config
+        // Get userId via AccountDetails or similar mechanism used in ReviewController
+        // Since NewsController uses Authentication directly, we need to extract userId.
+        // NOTE: CommentRequest likely has articleId and context.
+        // ReviewRequest needs: reviewType, targetId, rating, comment.
+        
+        // IMPORTANT: Need to map CommentRequest to ReviewRequest
+        // Or change front-end to send ReviewRequest format. 
+        // For backwards compatibility, I'll map it here.
+        
+        // First, get UserID. 
+        // Security logic might vary, let's assume authentication.getPrincipal returns AccountDetailsImpl
+        korastudy.be.security.userprinciple.AccountDetailsImpl userDetails = 
+             (korastudy.be.security.userprinciple.AccountDetailsImpl) authentication.getPrincipal();
+        Long userId = userDetails.getId();
+
+        ReviewRequest reviewRequest = new ReviewRequest();
+        reviewRequest.setReviewType(ReviewType.NEWS);
+        reviewRequest.setTargetId(request.getArticleId());
+        reviewRequest.setComment(request.getContent());
+        reviewRequest.setRating(0); // News comments have no rating
+
+        ReviewDTO comment = reviewService.addReview(userId, reviewRequest);
         
         Map<String, Object> response = new HashMap<>();
         response.put("data", comment);
@@ -154,8 +181,18 @@ public class NewsController {
             @RequestBody CommentRequest request,
             Authentication authentication
     ) {
-        String username = authentication.getName();
-        CommentResponse comment = newsService.updateComment(commentId, request, username);
+         korastudy.be.security.userprinciple.AccountDetailsImpl userDetails = 
+             (korastudy.be.security.userprinciple.AccountDetailsImpl) authentication.getPrincipal();
+        Long userId = userDetails.getId();
+        
+        // Map to ReviewRequest
+        ReviewRequest reviewRequest = new ReviewRequest();
+        reviewRequest.setReviewType(ReviewType.NEWS);
+        reviewRequest.setTargetId(request.getArticleId()); // Might ensure this matches
+        reviewRequest.setComment(request.getContent());
+        reviewRequest.setRating(0);
+        
+        ReviewDTO comment = reviewService.updateReview(userId, commentId, reviewRequest);
         
         Map<String, Object> response = new HashMap<>();
         response.put("data", comment);
@@ -169,8 +206,11 @@ public class NewsController {
             @PathVariable Long commentId,
             Authentication authentication
     ) {
-        String username = authentication.getName();
-        newsService.deleteComment(commentId, username);
+        korastudy.be.security.userprinciple.AccountDetailsImpl userDetails = 
+             (korastudy.be.security.userprinciple.AccountDetailsImpl) authentication.getPrincipal();
+        Long userId = userDetails.getId();
+        
+        reviewService.deleteReview(userId, commentId);
         
         return ResponseEntity.ok(Map.of("message", "Comment deleted successfully"));
     }

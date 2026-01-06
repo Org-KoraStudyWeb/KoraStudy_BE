@@ -84,7 +84,8 @@ public class CourseController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
             Pageable pageable
     ) {
-        return courseService.searchCoursesAdvanced(keyword, courseLevel, minPrice, maxPrice, startDate, endDate, pageable);
+        // Public search endpoint - only show published courses
+        return courseService.searchCoursesAdvanced(keyword, courseLevel, minPrice, maxPrice, true, startDate, endDate, pageable);
     }
 
     @GetMapping("/admin")

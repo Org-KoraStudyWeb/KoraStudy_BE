@@ -21,5 +21,6 @@ public class UpdatePostRequest {
     }
     
     private String featuredImage;
+    private List<Long> categoryIds; // Added field
     private List<PostMetaRequest> postMetas; // Meta đi kèm
 }

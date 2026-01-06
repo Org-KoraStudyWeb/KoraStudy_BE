@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/posts")
+@RequestMapping("/api/v1/posts")
 @RequiredArgsConstructor
 public class PostController {
 
@@ -30,8 +30,8 @@ public class PostController {
      * PUBLIC: Lấy tất cả bài viết
      */
     @GetMapping
-    public ResponseEntity<List<PostResponse>> getAllPosts() {
-        List<PostResponse> posts = postService.getAllPosts();
+    public ResponseEntity<List<PostResponse>> getAllPosts(@RequestParam(required = false) Long categoryId) {
+        List<PostResponse> posts = postService.getAllPosts(categoryId);
         return ResponseEntity.ok(posts);
     }
 

@@ -21,7 +21,8 @@ public class CloudinaryService implements IUploadService {
 
     private final Cloudinary cloudinary;
 
-    private static final int MAX_FILE_SIZE_MB = 500;
+    // Cloudinary free tier limits: 10MB for documents/images, 100MB for videos
+    private static final int MAX_FILE_SIZE_MB = 10;
     private static final int MAX_VIDEO_SIZE_MB = 100;
 
     // =========== OVERLOAD METHODS (KHÔNG CẦN TITLE) ===========
@@ -91,9 +92,18 @@ public class CloudinaryService implements IUploadService {
 
         } catch (IOException e) {
             log.error("Video upload failed: {}", file.getOriginalFilename(), e);
-            if (e.getMessage().contains("timeout") || e.getMessage().contains("Timeout")) {
-                throw new RuntimeException("Upload video timeout - File quá lớn hoặc kết nối chậm. Vui lòng thử lại với file nhỏ hơn.");
+            
+            // Check for specific error types
+            if (e.getMessage() != null) {
+                if (e.getMessage().contains("File size too large")) {
+                    throw new RuntimeException("Video quá lớn! Cloudinary free tier chỉ hỗ trợ video tối đa 100MB. " +
+                            "Vui lòng nén video hoặc nâng cấp Cloudinary account. Chi tiết: " + e.getMessage());
+                } else if (e.getMessage().contains("timeout") || e.getMessage().contains("Timeout")) {
+                    throw new RuntimeException("Upload video timeout - File quá lớn hoặc kết nối chậm. " +
+                            "Vui lòng thử lại với file nhỏ hơn hoặc kiểm tra kết nối mạng.");
+                }
             }
+            
             throw new RuntimeException("Lỗi khi upload video: " + e.getMessage());
         }
     }
@@ -141,6 +151,13 @@ public class CloudinaryService implements IUploadService {
 
         } catch (IOException e) {
             log.error("Document upload failed for file: {}", file.getOriginalFilename(), e);
+            
+            // Check if error is due to file size limit
+            if (e.getMessage() != null && e.getMessage().contains("File size too large")) {
+                throw new RuntimeException("File quá lớn! Cloudinary free tier chỉ hỗ trợ file tối đa 10MB. " +
+                        "Vui lòng nén file hoặc nâng cấp Cloudinary account. Chi tiết: " + e.getMessage());
+            }
+            
             throw new RuntimeException("Lỗi khi upload document: " + e.getMessage());
         }
     }
