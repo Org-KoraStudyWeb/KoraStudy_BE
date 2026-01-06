@@ -188,5 +188,13 @@ public class AdminExamController {
         return ResponseEntity.ok(question);
     }
 
+    /**
+     * Lấy thống kê exam cho dashboard
+     */
+    @GetMapping("/stats")
+    public ResponseEntity<Map<String, Object>> getExamDashboardStats() {
+        Map<String, Object> stats = adminExamService.getExamDashboardStats();
+        return ResponseEntity.ok(stats);
+    }
 
 }

@@ -24,4 +24,16 @@ public interface MockTestRepository extends JpaRepository<MockTest, Long> {
                                    @Param("level") String level,
                                    @Param("type") String type,
                                    Pageable pageable);
+
+    // Dashboard stats queries
+    long countByIsActiveTrue();
+    
+    long countByIsActiveFalse();
+
+    // Đếm số bài thi được tạo trong khoảng thời gian
+    @Query("SELECT COUNT(m) FROM MockTest m WHERE m.createdAt >= :startDate")
+    long countByCreatedAtAfter(@Param("startDate") java.time.LocalDateTime startDate);
+
+    // Đếm theo level
+    long countByLevel(String level);
 }
