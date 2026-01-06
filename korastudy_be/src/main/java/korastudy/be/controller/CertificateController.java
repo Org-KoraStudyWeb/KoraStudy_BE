@@ -307,7 +307,7 @@ public class CertificateController {
     }
 
     /**
-     * ✅ API lấy chi tiết certificate - BẮT BUỘC đăng nhập
+     *  API lấy chi tiết certificate - BẮT BUỘC đăng nhập
      * Chỉ user sở hữu hoặc admin mới được xem
      */
     @GetMapping("/{certificateId}")
@@ -422,7 +422,7 @@ public class CertificateController {
     }
 
     /**
-     * ✅ API mới: Xác thực công khai bằng certificateCode
+     * Xác thực công khai bằng certificateCode
      * KHÔNG cần đăng nhập
      */
     @GetMapping("/public/verify/{certificateCode}")
@@ -451,15 +451,7 @@ public class CertificateController {
 
             // Mask user name (chỉ hiển thị họ và tên viết tắt)
             String fullName = certificate.getUser().getFullName();
-            if (fullName != null && fullName.length() > 1) {
-                String[] nameParts = fullName.split(" ");
-                if (nameParts.length > 1) {
-                    String maskedName = nameParts[0] + " " + nameParts[nameParts.length - 1].charAt(0) + ".";
-                    verificationInfo.put("userName", maskedName);
-                } else {
-                    verificationInfo.put("userName", fullName);
-                }
-            }
+            verificationInfo.put("userName", fullName);
 
             verificationInfo.put("courseName", certificate.getCourse().getCourseName());
             verificationInfo.put("issuedBy", "Kora Study");

@@ -12,6 +12,9 @@ public interface ComprehensiveTestResultRepository extends JpaRepository<Compreh
     List<ComprehensiveTestResult> findByUserId(Long userId);
 
     List<ComprehensiveTestResult> findByUser(User user);
+    
+    // Tìm kiếm theo userId sắp xếp theo thời gian tạo giảm dần
+    List<ComprehensiveTestResult> findByUserIdOrderByCreatedAtDesc(Long userId);
 
     // Đếm số người dùng unique đã làm bài thi
     @Query("SELECT COUNT(DISTINCT c.user.id) FROM ComprehensiveTestResult c WHERE c.mockTest.id = :mockTestId")

@@ -144,35 +144,33 @@ public class NewsController {
             @RequestBody CommentRequest request,
             Authentication authentication
     ) {
-        // Assume user is authenticated if we got here or via security config
-        // Get userId via AccountDetails or similar mechanism used in ReviewController
-        // Since NewsController uses Authentication directly, we need to extract userId.
-        // NOTE: CommentRequest likely has articleId and context.
-        // ReviewRequest needs: reviewType, targetId, rating, comment.
-        
-        // IMPORTANT: Need to map CommentRequest to ReviewRequest
-        // Or change front-end to send ReviewRequest format. 
-        // For backwards compatibility, I'll map it here.
-        
-        // First, get UserID. 
-        // Security logic might vary, let's assume authentication.getPrincipal returns AccountDetailsImpl
-        korastudy.be.security.userprinciple.AccountDetailsImpl userDetails = 
-             (korastudy.be.security.userprinciple.AccountDetailsImpl) authentication.getPrincipal();
-        Long userId = userDetails.getId();
+        try {
+            if (authentication == null || !authentication.isAuthenticated() || 
+                !(authentication.getPrincipal() instanceof korastudy.be.security.userprinciple.AccountDetailsImpl)) {
+                return ResponseEntity.status(401).body(Map.of("message", "Bạn cần đăng nhập để bình luận"));
+            }
 
-        ReviewRequest reviewRequest = new ReviewRequest();
-        reviewRequest.setReviewType(ReviewType.NEWS);
-        reviewRequest.setTargetId(request.getArticleId());
-        reviewRequest.setComment(request.getContent());
-        reviewRequest.setRating(0); // News comments have no rating
+            korastudy.be.security.userprinciple.AccountDetailsImpl userDetails = 
+                 (korastudy.be.security.userprinciple.AccountDetailsImpl) authentication.getPrincipal();
+            Long userId = userDetails.getId();
 
-        ReviewDTO comment = reviewService.addReview(userId, reviewRequest);
-        
-        Map<String, Object> response = new HashMap<>();
-        response.put("data", comment);
-        response.put("message", "Comment created successfully");
-        
-        return ResponseEntity.ok(response);
+            ReviewRequest reviewRequest = new ReviewRequest();
+            reviewRequest.setReviewType(ReviewType.NEWS);
+            reviewRequest.setTargetId(request.getArticleId());
+            reviewRequest.setComment(request.getContent());
+            reviewRequest.setRating(0); // News comments have no rating
+
+            ReviewDTO comment = reviewService.addReview(userId, reviewRequest);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("data", comment);
+            response.put("message", "Comment created successfully");
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("message", "Lỗi server: " + e.getMessage()));
+        }
     }
 
     @PutMapping("/article-comments/{commentId}")
@@ -181,24 +179,34 @@ public class NewsController {
             @RequestBody CommentRequest request,
             Authentication authentication
     ) {
-         korastudy.be.security.userprinciple.AccountDetailsImpl userDetails = 
-             (korastudy.be.security.userprinciple.AccountDetailsImpl) authentication.getPrincipal();
-        Long userId = userDetails.getId();
-        
-        // Map to ReviewRequest
-        ReviewRequest reviewRequest = new ReviewRequest();
-        reviewRequest.setReviewType(ReviewType.NEWS);
-        reviewRequest.setTargetId(request.getArticleId()); // Might ensure this matches
-        reviewRequest.setComment(request.getContent());
-        reviewRequest.setRating(0);
-        
-        ReviewDTO comment = reviewService.updateReview(userId, commentId, reviewRequest);
-        
-        Map<String, Object> response = new HashMap<>();
-        response.put("data", comment);
-        response.put("message", "Comment updated successfully");
-        
-        return ResponseEntity.ok(response);
+        try {
+            if (authentication == null || !authentication.isAuthenticated() || 
+                !(authentication.getPrincipal() instanceof korastudy.be.security.userprinciple.AccountDetailsImpl)) {
+                return ResponseEntity.status(401).body(Map.of("message", "Bạn cần đăng nhập để sửa bình luận"));
+            }
+
+            korastudy.be.security.userprinciple.AccountDetailsImpl userDetails = 
+                 (korastudy.be.security.userprinciple.AccountDetailsImpl) authentication.getPrincipal();
+            Long userId = userDetails.getId();
+            
+            // Map to ReviewRequest
+            ReviewRequest reviewRequest = new ReviewRequest();
+            reviewRequest.setReviewType(ReviewType.NEWS);
+            reviewRequest.setTargetId(request.getArticleId()); // Might ensure this matches
+            reviewRequest.setComment(request.getContent());
+            reviewRequest.setRating(0);
+            
+            ReviewDTO comment = reviewService.updateReview(userId, commentId, reviewRequest);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("data", comment);
+            response.put("message", "Comment updated successfully");
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+             e.printStackTrace();
+             return ResponseEntity.status(500).body(Map.of("message", "Lỗi server khi update: " + e.getMessage()));
+        }
     }
 
     @DeleteMapping("/article-comments/{commentId}")
