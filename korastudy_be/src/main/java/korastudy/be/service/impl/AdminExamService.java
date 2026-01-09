@@ -22,7 +22,7 @@ import java.util.Map;
 public class AdminExamService {
     
     private final MockTestRepository mockTestRepo;
-    private final   MockTestPartRepository partRepo;
+    private final MockTestPartRepository partRepo;
     private final MockTestQuestionRepository questionRepo;
     private final MockTestAnswersRepository answersRepo;
     private final ComprehensiveTestResultRepository resultRepo;
