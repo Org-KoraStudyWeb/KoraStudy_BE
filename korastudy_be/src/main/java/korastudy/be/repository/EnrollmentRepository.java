@@ -40,6 +40,9 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
     @Query("SELECT e FROM Enrollment e WHERE e.user.id = :userId AND e.status = 'ACTIVE' ORDER BY e.enrollDate DESC")
     List<Enrollment> findActiveEnrollmentsByUser(Long userId);
 
+    @Query("SELECT e FROM Enrollment e JOIN FETCH e.user JOIN FETCH e.course ORDER BY e.createdAt DESC")
+    List<Enrollment> findRecentEnrollments(Pageable pageable);
+
     // 1. Tìm enrollment theo status (cho admin filter)
     List<Enrollment> findByStatus(EnrollmentStatus status);
     Page<Enrollment> findByStatus(EnrollmentStatus status, Pageable pageable);

@@ -129,4 +129,10 @@ public class EnrollmentController {
     public ResponseEntity<?> getEnrollmentStats() {
         return ResponseEntity.ok(enrollmentService.getEnrollmentStats());
     }
+
+    @GetMapping("/recent")
+    @PreAuthorize("hasAnyRole('CONTENT_MANAGER', 'ADMIN')")
+    public ResponseEntity<List<korastudy.be.dto.response.enrollment.RecentEnrollmentDTO>> getRecentEnrollments(@RequestParam(defaultValue = "5") int limit) {
+        return ResponseEntity.ok(enrollmentService.getRecentEnrollments(limit));
+    }
 }
