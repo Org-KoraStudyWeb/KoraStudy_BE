@@ -35,6 +35,7 @@ public class CourseCompletionService {
     private final LessonRepository lessonRepository;
     private final QuizRepository quizRepository;
     private final IQuizService quizService;
+    private final UserRepository userRepository;
 
     // ==================== TIẾN ĐỘ VÀ HOÀN THÀNH ====================
 
@@ -169,8 +170,8 @@ public class CourseCompletionService {
             throw new RuntimeException("User has not completed the course");
         }
 
-        User user = new User();
-        user.setId(userId);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new RuntimeException("Course not found"));
