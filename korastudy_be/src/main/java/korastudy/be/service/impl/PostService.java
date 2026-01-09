@@ -235,7 +235,10 @@ public class PostService implements IPostService {
         boolean isAdmin = currentUser.getAuthorities().stream()
                 .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"));
 
-        boolean isOwner = post.getCreatedBy().getId().equals(currentAccount.getId());
+        boolean isOwner = false;
+        if (post.getCreatedBy() != null) {
+            isOwner = post.getCreatedBy().getId().equals(currentAccount.getId());
+        }
 
         if (!isAdmin && !isOwner) {
             throw new AccessDeniedException("You do not have permission to modify this post");
