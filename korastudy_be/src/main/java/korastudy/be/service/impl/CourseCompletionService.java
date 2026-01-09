@@ -157,6 +157,7 @@ public class CourseCompletionService {
      */
     @Transactional
     public Certificate createCertificateIfEligible(Long userId, Long courseId) {
+        log.info("🎓 [FIXED_V2] Creating certificate for userId: {}, courseId: {} (Flush added)", userId, courseId);
 
         Optional<Certificate> existing = getUserCertificateSafe(userId, courseId);
         if (existing.isPresent()) {
