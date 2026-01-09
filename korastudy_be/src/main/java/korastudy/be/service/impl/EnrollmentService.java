@@ -155,6 +155,23 @@ public class EnrollmentService implements IEnrollmentService {
                 .build();
     }
 
+    @Override
+    public List<korastudy.be.dto.response.enrollment.RecentEnrollmentDTO> getRecentEnrollments(int limit) {
+        Pageable pageable = org.springframework.data.domain.PageRequest.of(0, limit);
+        List<Enrollment> enrollments = enrollmentRepository.findRecentEnrollments(pageable);
+        return enrollments.stream().map(enrollment -> korastudy.be.dto.response.enrollment.RecentEnrollmentDTO.builder()
+                .id(enrollment.getId())
+                .userId(enrollment.getUser().getId())
+                .userFullName(enrollment.getUser().getFirstName() + " " + enrollment.getUser().getLastName())
+                .userAvatar(enrollment.getUser().getAvatar())
+                .userEmail(enrollment.getUser().getEmail())
+                .courseId(enrollment.getCourse().getId())
+                .courseName(enrollment.getCourse().getCourseName())
+                .enrollmentDate(enrollment.getCreatedAt())
+                .build())
+                .collect(Collectors.toList());
+    }
+
     // ==================== HELPER METHODS ====================
 
     private int calculateTotalLessons(Course course) {
