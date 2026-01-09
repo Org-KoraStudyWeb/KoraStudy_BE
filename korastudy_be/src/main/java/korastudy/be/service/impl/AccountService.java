@@ -290,4 +290,14 @@ public class AccountService implements IAccountService {
         // Gửi lại email
         emailService.sendVerificationEmail(account.getEmail(), newToken);
     }
+
+    @Override
+    public boolean existsByUsername(String username) {
+        return accountRepository.existsByUsername(username);
+    }
+
+    @Override
+    public boolean existsByEmail(String email) {
+        return accountRepository.existsByEmail(email);
+    }
 }

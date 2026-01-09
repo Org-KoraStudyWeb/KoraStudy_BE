@@ -34,5 +34,10 @@ public interface IAccountService {
     // Validate reset token
     void validateResetToken(String token);
 
+    // Kiểm tra tồn tại
+    boolean existsByUsername(String username);
+
+    boolean existsByEmail(String email);
+
 
 }

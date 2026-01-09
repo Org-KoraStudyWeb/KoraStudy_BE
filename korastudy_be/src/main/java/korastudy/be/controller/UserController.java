@@ -19,6 +19,17 @@ import java.security.Principal;
 @PreAuthorize("hasAnyRole('DELIVERY_MANAGER', 'CONTENT_MANAGER', 'USER', 'ADMIN')")
 public class UserController {
     private final UserService userService;
+    private final korastudy.be.service.impl.UserStudyActivityService userStudyActivityService;
+
+    @GetMapping("/recent-activities")
+    public ResponseEntity<?> getRecentActivities(@RequestParam Long userId) {
+        return ResponseEntity.ok(userStudyActivityService.getRecentDetailedActivities(userId));
+    }
+
+    @GetMapping("/study-stats")
+    public ResponseEntity<?> getStudyStats(@RequestParam Long userId) {
+        return ResponseEntity.ok(userStudyActivityService.getUserStudyStats(userId));
+    }
 
     @PutMapping("/update")
     public ResponseEntity<ApiSuccess> updateProfile(@Valid @RequestBody UpdateManagerProfileRequest request, Principal principal) {

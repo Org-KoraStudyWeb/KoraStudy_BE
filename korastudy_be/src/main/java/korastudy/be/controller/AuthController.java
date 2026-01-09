@@ -115,6 +115,18 @@ public class AuthController {
         return ResponseEntity.ok(ApiSuccess.of("Token hợp lệ"));
     }
 
+    // Checking username exists
+    @GetMapping("/check-username")
+    public ResponseEntity<Boolean> checkUsername(@RequestParam String username) {
+        return ResponseEntity.ok(accountService.existsByUsername(username));
+    }
+
+    // Checking email exists
+    @GetMapping("/check-email")
+    public ResponseEntity<Boolean> checkEmail(@RequestParam String email) {
+        return ResponseEntity.ok(accountService.existsByEmail(email));
+    }
+
 }
 
 

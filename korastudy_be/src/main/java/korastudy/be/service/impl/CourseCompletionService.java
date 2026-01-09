@@ -35,6 +35,7 @@ public class CourseCompletionService {
     private final LessonRepository lessonRepository;
     private final QuizRepository quizRepository;
     private final IQuizService quizService;
+    private final UserRepository userRepository;
 
     // ==================== TIẾN ĐỘ VÀ HOÀN THÀNH ====================
 
@@ -78,7 +79,7 @@ public class CourseCompletionService {
 
 
     /**
-     *  Chỉ update certificate khi điểm quiz TĂNG
+     * Chỉ update certificate khi điểm quiz TĂNG
      */
     private void updateCertificateScoreIfNeeded(Long userId, Long courseId) {
         Optional<Certificate> certificateOpt = getUserCertificateSafe(userId, courseId);
@@ -107,7 +108,7 @@ public class CourseCompletionService {
 
 
     /**
-     *  Lấy certificate của user (an toàn với duplicate)
+     * Lấy certificate của user (an toàn với duplicate)
      */
     private Optional<Certificate> getUserCertificateSafe(Long userId, Long courseId) {
         List<Certificate> certificates = certificateRepository.findByUserIdAndCourseId(userId, courseId);
@@ -152,47 +153,34 @@ public class CourseCompletionService {
     }
 
     /**
-     *  Tạo certificate với protection tốt hơn
+     * Tạo certificate với protection tốt hơn
      */
     @Transactional
     public Certificate createCertificateIfEligible(Long userId, Long courseId) {
-        log.info("🎓 Creating certificate for userId: {}, courseId: {}", userId, courseId);
 
-        // Double-check trong transaction
         Optional<Certificate> existing = getUserCertificateSafe(userId, courseId);
         if (existing.isPresent()) {
-            log.info("✅ Certificate already exists, returning it");
             return existing.get();
         }
 
         if (!isCourseCompleted(userId, courseId)) {
-            throw new RuntimeException("User has not completed the course");
+            throw new IllegalStateException("User has not completed the course");
         }
 
-        User user = new User();
-        user.setId(userId);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new RuntimeException("Course not found"));
 
         try {
             Certificate certificate = createNewCertificate(user, course, userId);
-            log.info(" Certificate created - id: {}", certificate.getId());
+            certificateRepository.flush(); // 🔥 then catch works
             return certificate;
 
         } catch (DataIntegrityViolationException e) {
-            log.warn(" Race condition detected, fetching existing certificate");
-
-            // Sleep ngắn để đợi transaction commit
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException ie) {
-                Thread.currentThread().interrupt();
-            }
-
             return getUserCertificateSafe(userId, courseId)
-                    .orElseThrow(() -> new RuntimeException(
-                            "Certificate creation failed and could not retrieve existing"));
+                    .orElseThrow(() -> new RuntimeException("Certificate exists but cannot retrieve"));
         }
     }
 
@@ -215,14 +203,14 @@ public class CourseCompletionService {
     }
 
     /**
-     *  Lấy certificate bằng certificateCode
+     * Lấy certificate bằng certificateCode
      */
     public Optional<Certificate> getCertificateByCode(String certificateCode) {
         return certificateRepository.findByCertificateCode(certificateCode);
     }
 
     /**
-     *  Check tồn tại certificate bằng code
+     * Check tồn tại certificate bằng code
      */
     public boolean existsByCertificateCode(String certificateCode) {
         return certificateRepository.existsByCertificateCode(certificateCode);
@@ -321,7 +309,6 @@ public class CourseCompletionService {
             return 0.0;
         }
     }
-
 
 
     // ==================== TÍNH TOÁN ====================

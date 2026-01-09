@@ -81,4 +81,9 @@ public interface IEnrollmentService {
      * - Số enrollment completed
      */
     EnrollmentStatsDTO getEnrollmentStats();
+    
+    /**
+     * Lấy danh sách đăng ký gần đây nhất (system-wide)
+     */
+    List<korastudy.be.dto.response.enrollment.RecentEnrollmentDTO> getRecentEnrollments(int limit);
 }
